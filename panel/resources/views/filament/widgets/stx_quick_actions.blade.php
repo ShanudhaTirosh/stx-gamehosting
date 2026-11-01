@@ -109,63 +109,54 @@
                 </span>
             </a>
 
-            <!-- Trio External Portals (Harmonious STX Glass Styling) -->
-            <div class="pt-1.5 grid grid-cols-3 gap-2" style="min-width: 0;">
+            <!-- Dual Action Portals (Storefront & Status Page - Clean 2-Column Matching Image 4) -->
+            <div class="grid grid-cols-2 gap-2.5 pt-1" style="min-width: 0;">
                 <a
                     href="/"
                     target="_blank"
-                    class="py-2.5 px-2 rounded-xl text-center font-bold text-xs transition flex items-center justify-center gap-1.5 group hover:scale-[1.02]"
-                    style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.22); color: #a5b4fc; min-width: 0;"
+                    class="py-2.5 px-3 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 hover:bg-white/[0.08] hover:text-white"
+                    style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); color: #cbd5e1; min-width: 0;"
                 >
-                    <x-filament::icon icon="tabler-shopping-cart" class="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                    <span class="truncate">Store</span>
+                    <x-filament::icon icon="tabler-shopping-cart" class="w-4 h-4 text-gray-300 shrink-0" />
+                    <span class="truncate">Storefront</span>
                 </a>
                 <a
                     href="/status"
                     target="_blank"
-                    class="py-2.5 px-2 rounded-xl text-center font-bold text-xs transition flex items-center justify-center gap-1.5 group hover:scale-[1.02]"
-                    style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.22); color: #6ee7b7; min-width: 0;"
+                    class="py-2.5 px-3 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 hover:bg-emerald-500/20"
+                    style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; min-width: 0;"
                 >
-                    <x-filament::icon icon="tabler-radar" class="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span class="truncate">Status</span>
-                </a>
-                <a
-                    href="/help"
-                    target="_blank"
-                    class="py-2.5 px-2 rounded-xl text-center font-bold text-xs transition flex items-center justify-center gap-1.5 group hover:scale-[1.02]"
-                    style="background: rgba(236, 72, 153, 0.08); border: 1px solid rgba(236, 72, 153, 0.22); color: #f472b6; min-width: 0;"
-                >
-                    <x-filament::icon icon="tabler-help" class="w-3.5 h-3.5 text-pink-400 shrink-0" />
-                    <span class="truncate">Help Desk</span>
+                    <x-filament::icon icon="tabler-chart-pie" class="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span class="truncate">Status Page</span>
                 </a>
             </div>
 
-            <!-- Cluster Diagnostics & Engine Vitals Card (2x2 Professional Telemetry Grid) -->
-            <div class="p-3 rounded-xl mt-2 space-y-2.5 text-xs" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.06);">
-                <div class="flex items-center justify-between text-[11px] font-bold text-gray-300 pb-1.5 border-b" style="border-color: rgba(255, 255, 255, 0.06);">
-                    <div class="flex items-center gap-1.5">
+            <!-- Cluster Diagnostics & Engine Vitals Card (Clean Terminal List matching Image 4) -->
+            <div class="p-3.5 rounded-xl mt-2 space-y-2 text-xs" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.06);">
+                <div class="flex items-center justify-between text-[11px] font-bold text-gray-300 pb-2 border-b" style="border-color: rgba(255, 255, 255, 0.06);">
+                    <div class="flex items-center gap-2">
                         <span class="w-2 h-2 rounded-full" style="background: #10b981; box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);"></span>
                         <span>System Vitals</span>
                     </div>
-                    <span class="font-mono text-[10px] text-emerald-400 font-semibold">All Systems OK</span>
+                    <span class="font-mono text-[10px] text-gray-400">STX Core</span>
                 </div>
 
-                <div class="grid grid-cols-2 gap-2 text-[11px]">
-                    <div class="p-2 rounded-lg" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04);">
-                        <div class="text-[10px] text-gray-400">Core Engine</div>
-                        <div class="font-bold text-white mt-0.5 font-mono">v1.0.0-rc.2</div>
+                <div class="space-y-1.5 font-mono text-[11px]">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-400">Cluster Engine:</span>
+                        <span class="font-bold text-emerald-400">v1.0.0-rc.2</span>
                     </div>
-                    <div class="p-2 rounded-lg" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04);">
-                        <div class="text-[10px] text-gray-400">Database</div>
-                        <div class="font-bold text-emerald-400 mt-0.5 font-mono">MariaDB 10.11</div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-400">Database:</span>
+                        <span class="font-bold text-emerald-400">MariaDB 10.11</span>
                     </div>
-                    <div class="p-2 rounded-lg" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04);">
-                        <div class="text-[10px] text-gray-400">Cache Layer</div>
-                        <div class="font-bold text-emerald-400 mt-0.5 font-mono">Redis Online</div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-400">Cache / Sessions:</span>
+                        <span class="font-bold text-emerald-400">Redis Online</span>
                     </div>
-                    <div class="p-2 rounded-lg" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04);">
-                        <div class="text-[10px] text-gray-400">Queue Worker</div>
-                        <div class="font-bold text-indigo-300 mt-0.5 font-mono">Running</div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-400">Queue Worker:</span>
+                        <span class="font-bold text-emerald-400">Active</span>
                     </div>
                 </div>
             </div>
