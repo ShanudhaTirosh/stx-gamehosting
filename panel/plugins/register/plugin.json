@@ -1,0 +1,20 @@
+{
+    "id": "register",
+    "name": "Register",
+    "author": "Boy132",
+    "version": "1.0.0",
+    "description": "A simple way for users to register themselves",
+    "category": "plugin",
+    "url": "https://hub.pelican.dev/plugins/register",
+    "update_url": "https://hub.pelican.dev/plugins/register/update.json",
+    "namespace": "Boy132\\Register",
+    "class": "RegisterPlugin",
+    "panels": null,
+    "panel_version": null,
+    "api_version": 1,
+    "meta": {
+        "status": "enabled",
+        "load_order": 1
+    },
+    "composer_packages": null
+}

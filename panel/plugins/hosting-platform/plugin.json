@@ -1,0 +1,24 @@
+{
+    "id": "hosting-platform",
+    "name": "Hosting Platform & Storefront",
+    "author": "Branded Hosting Team",
+    "version": "1.0.0",
+    "description": "Complete branded hosting storefront, LKR manual payment verification (Bank, eZ Cash, HelaPay), and automated provisioning engine for Pelican Panel.",
+    "category": "plugin",
+    "url": null,
+    "update_url": null,
+    "namespace": "BrandedHosting\\Platform",
+    "class": "HostingPlatformPlugin",
+    "panels": [
+        "admin",
+        "app"
+    ],
+    "panel_version": null,
+    "api_version": 1,
+    "composer_packages": null,
+    "meta": {
+        "status": "enabled",
+        "load_order": 1,
+        "status_message": null
+    }
+}

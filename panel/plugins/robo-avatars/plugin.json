@@ -1,0 +1,16 @@
+{
+    "id": "robo-avatars",
+    "name": "Robo Avatars",
+    "author": "Boy132",
+    "version": "1.0.0",
+    "description": "Adds RoboHash as avatar provider",
+    "category": "plugin",
+    "url": "https://hub.pelican.dev/plugins/robo-avatars",
+    "update_url": "https://hub.pelican.dev/plugins/robo-avatars/update.json",
+    "namespace": "Boy132\\RoboAvatars",
+    "class": "RoboAvatarsPlugin",
+    "panels": null,
+    "panel_version": null,
+    "api_version": 1,
+    "composer_packages": null
+}

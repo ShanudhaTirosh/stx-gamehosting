@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 340" width="100%" height="100%">
+  <defs>
+    <linearGradient id="webBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a1026" />
+      <stop offset="50%" stop-color="#141838" />
+      <stop offset="100%" stop-color="#060917" />
+    </linearGradient>
+    <linearGradient id="webIndigo" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#8b5cf6" />
+    </linearGradient>
+    <filter id="webGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="7" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <rect width="600" height="340" rx="20" fill="url(#webBg)" />
+  <rect width="598" height="338" x="1" y="1" rx="19" fill="none" stroke="rgba(99, 102, 241, 0.3)" stroke-width="1.5" />
+
+  <!-- Cloud Chassis / Rack -->
+  <g transform="translate(300, 150)" filter="url(#webGlow)">
+    <!-- Rack 1 -->
+    <rect x="-90" y="-60" width="180" height="32" rx="6" fill="#0f172a" stroke="url(#webIndigo)" stroke-width="2" />
+    <circle cx="-70" cy="-44" r="4" fill="#10b981" />
+    <circle cx="-55" cy="-44" r="4" fill="#38bdf8" />
+    <line x1="-35" y1="-44" x2="65" y2="-44" stroke="rgba(255,255,255,0.2)" stroke-width="3" stroke-dasharray="4 4" />
+
+    <!-- Rack 2 -->
+    <rect x="-90" y="-20" width="180" height="32" rx="6" fill="#0f172a" stroke="url(#webIndigo)" stroke-width="2" />
+    <circle cx="-70" cy="-4" r="4" fill="#10b981" />
+    <circle cx="-55" cy="-4" r="4" fill="#f59e0b" />
+    <line x1="-35" y1="-4" x2="65" y2="-4" stroke="rgba(255,255,255,0.2)" stroke-width="3" stroke-dasharray="4 4" />
+
+    <!-- Rack 3 -->
+    <rect x="-90" y="20" width="180" height="32" rx="6" fill="#0f172a" stroke="url(#webIndigo)" stroke-width="2" />
+    <circle cx="-70" cy="36" r="4" fill="#10b981" />
+    <circle cx="-55" cy="36" r="4" fill="#10b981" />
+    <line x1="-35" y1="36" x2="65" y2="36" stroke="rgba(255,255,255,0.2)" stroke-width="3" stroke-dasharray="4 4" />
+  </g>
+
+  <!-- Tag Pills -->
+  <g transform="translate(100, 50)" filter="url(#webGlow)">
+    <rect width="105" height="28" rx="8" fill="rgba(99, 102, 241, 0.2)" stroke="#6366f1" stroke-width="1.5" />
+    <text x="52" y="19" fill="#c7d2fe" font-family="system-ui, sans-serif" font-size="10" font-weight="900" text-anchor="middle" letter-spacing="1">NODE.JS / PYTHON / PHP</text>
+  </g>
+  <g transform="translate(400, 50)" filter="url(#webGlow)">
+    <rect width="100" height="28" rx="8" fill="rgba(16, 185, 129, 0.2)" stroke="#10b981" stroke-width="1.5" />
+    <text x="50" y="19" fill="#a7f3d0" font-family="system-ui, sans-serif" font-size="10" font-weight="900" text-anchor="middle" letter-spacing="1">SSL &amp; REVERSE PROXY</text>
+  </g>
+
+  <text x="300" y="315" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="12" font-weight="700" text-anchor="middle" letter-spacing="2">
+    STX ENTERPRISES • ULTRA-FAST WEB &amp; API CONTAINER CLOUD
+  </text>
+</svg>

@@ -1,0 +1,94 @@
+name: Build & Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read version from plugin.json
+        id: ver
+        run: |
+          VERSION="$(grep -oE '"version"[[:space:]]*:[[:space:]]*"[^"]+"' plugin.json | grep -oE '[0-9][^"]*')"
+          if [ -z "$VERSION" ]; then
+            echo "::error::Could not read version from plugin.json"
+            exit 1
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Releasing as: v${VERSION}"
+
+      - name: Build plugin zip
+        run: |
+          set -euo pipefail
+          rm -rf build && mkdir -p build/modpack-manager
+          rsync -a \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude 'build' \
+            --exclude '.DS_Store' \
+            --exclude '*.tar.gz' \
+            --exclude '*.zip' \
+            --exclude 'update.json' \
+            ./ build/modpack-manager/
+
+          # Stamp the outgoing User-Agent with the released version so CurseForge,
+          # Modrinth and FTB see an accurate one without it having to be hand-edited
+          # each release. Only our own `pelican-modpack-manager/<version>` token is
+          # rewritten: the version is replaced in place, so Modrinth's trailing
+          # "(contact)" suffix survives, and ATLauncher's deliberately browser-like
+          # UA is never matched. This edits the build copy only -- the committed
+          # source keeps whatever version it has.
+          VERSION="${{ steps.ver.outputs.version }}"
+          find build/modpack-manager/src -name '*.php' -print0 \
+            | xargs -0 sed -i -E "s#pelican-modpack-manager/[0-9][0-9A-Za-z._-]*#pelican-modpack-manager/${VERSION}#g"
+          echo "--- stamped user agents ---"
+          grep -rn "pelican-modpack-manager/" build/modpack-manager/src
+          if grep -rn "pelican-modpack-manager/" build/modpack-manager/src | grep -v "pelican-modpack-manager/${VERSION}"; then
+            echo "::error::A User-Agent listed above was left on a stale version"
+            exit 1
+          fi
+
+          ( cd build && zip -r -q -X ../modpack-manager.zip modpack-manager -x '*.DS_Store' )
+          echo "--- zip contents (top level) ---"
+          unzip -l modpack-manager.zip | head -n 20
+          unzip -l modpack-manager.zip | grep -q 'modpack-manager/plugin.json'
+
+      # Pelican fetches this file from the `update_url` in plugin.json to decide
+      # whether an update is available. It is regenerated on every release and
+      # published as an asset of that release, so /releases/latest/download/update.json
+      # always describes the newest version. The "*" key is a panel-version
+      # wildcard: one plugin build serves every supported panel version.
+      - name: Generate update.json
+        run: |
+          set -euo pipefail
+          cat > update.json <<EOF
+          {
+              "*": {
+                  "version": "${{ steps.ver.outputs.version }}",
+                  "download_url": "https://github.com/${{ github.repository }}/releases/download/${{ steps.ver.outputs.tag }}/modpack-manager.zip"
+              }
+          }
+          EOF
+          cat update.json
+
+      - name: Create / update release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: ${{ steps.ver.outputs.tag }}
+          generate_release_notes: true
+          make_latest: true
+          files: |
+            modpack-manager.zip
+            update.json

@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 340" width="100%" height="100%">
+  <defs>
+    <linearGradient id="hytaleBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="50%" stop-color="#1e1b4b" />
+      <stop offset="100%" stop-color="#090d16" />
+    </linearGradient>
+    <linearGradient id="runeGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a855f7" />
+      <stop offset="50%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#38bdf8" />
+    </linearGradient>
+    <filter id="hytaleGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <rect width="600" height="340" rx="20" fill="url(#hytaleBg)" />
+  <rect width="598" height="338" x="1" y="1" rx="19" fill="none" stroke="rgba(168, 85, 247, 0.3)" stroke-width="1.5" />
+
+  <!-- Mystical Portal Ring -->
+  <g transform="translate(300, 150)">
+    <circle cx="0" cy="0" r="90" fill="none" stroke="rgba(99, 102, 241, 0.2)" stroke-width="2" />
+    <circle cx="0" cy="0" r="75" fill="none" stroke="url(#runeGlow)" stroke-width="4" stroke-dasharray="8 6" filter="url(#hytaleGlow)" />
+    <circle cx="0" cy="0" r="60" fill="url(#runeGlow)" opacity="0.15" filter="url(#hytaleGlow)" />
+    <!-- Floating Rune Diamond -->
+    <polygon points="0,-45 35,0 0,45 -35,0" fill="#1e1b4b" stroke="url(#runeGlow)" stroke-width="3" filter="url(#hytaleGlow)" />
+    <polygon points="0,-25 20,0 0,25 -20,0" fill="#a855f7" opacity="0.7" />
+    <circle cx="0" cy="0" r="6" fill="#ffffff" filter="url(#hytaleGlow)" />
+  </g>
+
+  <!-- Side Constellations -->
+  <circle cx="150" cy="120" r="3" fill="#c084fc" filter="url(#hytaleGlow)" />
+  <circle cx="180" cy="160" r="2" fill="#818cf8" />
+  <line x1="150" y1="120" x2="180" y2="160" stroke="rgba(168, 85, 247, 0.3)" stroke-width="1" />
+  <circle cx="450" cy="130" r="3" fill="#38bdf8" filter="url(#hytaleGlow)" />
+  <circle cx="420" cy="180" r="2" fill="#c084fc" />
+  <line x1="450" y1="130" x2="420" y2="180" stroke="rgba(56, 189, 248, 0.3)" stroke-width="1" />
+
+  <!-- Tag Pills -->
+  <g transform="translate(100, 60)" filter="url(#hytaleGlow)">
+    <rect width="105" height="28" rx="8" fill="rgba(168, 85, 247, 0.2)" stroke="#a855f7" stroke-width="1.5" />
+    <text x="52" y="19" fill="#e9d5ff" font-family="system-ui, sans-serif" font-size="10" font-weight="900" text-anchor="middle" letter-spacing="1">HYTALE EARLY ACCESS</text>
+  </g>
+  <g transform="translate(400, 60)" filter="url(#hytaleGlow)">
+    <rect width="100" height="28" rx="8" fill="rgba(99, 102, 241, 0.2)" stroke="#6366f1" stroke-width="1.5" />
+    <text x="50" y="19" fill="#c7d2fe" font-family="system-ui, sans-serif" font-size="10" font-weight="900" text-anchor="middle" letter-spacing="1">ORBIS WORLD GEN</text>
+  </g>
+
+  <text x="300" y="315" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="12" font-weight="700" text-anchor="middle" letter-spacing="2">
+    STX ENTERPRISES • HYTALE ADVENTURE & DEDICATED SERVERS
+  </text>
+</svg>

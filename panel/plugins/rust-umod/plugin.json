@@ -1,0 +1,22 @@
+{
+    "id": "rust-umod",
+    "name": "Rust uMod",
+    "author": "Boy132",
+    "version": "1.0.0",
+    "description": "Easily download rust plugins from uMod",
+    "category": "plugin",
+    "url": "https://hub.pelican.dev/plugins/rust-umod",
+    "update_url": "https://hub.pelican.dev/plugins/rust-umod/update.json",
+    "namespace": "Boy132\\RustUMod",
+    "class": "RustUModPlugin",
+    "panels": [
+        "server"
+    ],
+    "panel_version": null,
+    "api_version": 1,
+    "meta": {
+        "status": "enabled",
+        "load_order": 1
+    },
+    "composer_packages": null
+}

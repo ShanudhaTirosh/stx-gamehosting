@@ -1,0 +1,23 @@
+{
+    "id":  "tickets",
+    "name":  "Tickets",
+    "author":  "Boy132",
+    "version":  "1.0.0",
+    "description":  "Simple ticket system",
+    "category":  "plugin",
+    "url":  "https://hub.pelican.dev/plugins/tickets",
+    "update_url":  "https://hub.pelican.dev/plugins/tickets/update.json",
+    "namespace":  "Boy132\\Tickets",
+    "class":  "TicketsPlugin",
+    "panels":  [
+                   "admin",
+                   "server"
+               ],
+    "panel_version":  null,
+    "api_version":  1,
+    "composer_packages":  null,
+    "meta":  {
+                 "status":  "enabled",
+                 "load_order":  1
+             }
+}

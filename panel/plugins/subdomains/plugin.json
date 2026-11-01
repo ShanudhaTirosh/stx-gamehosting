@@ -1,0 +1,23 @@
+{
+    "id":  "subdomains",
+    "name":  "Subdomains",
+    "author":  "Boy132 \u0026 HarlequinSin \u0026 gavidroselj",
+    "version":  "1.3.0",
+    "description":  "Allows users to create subdomains for their servers",
+    "category":  "plugin",
+    "url":  "https://hub.pelican.dev/plugins/subdomains",
+    "update_url":  "https://hub.pelican.dev/plugins/subdomains/update.json",
+    "namespace":  "Boy132\\Subdomains",
+    "class":  "SubdomainsPlugin",
+    "panels":  [
+                   "admin",
+                   "server"
+               ],
+    "panel_version":  null,
+    "api_version":  1,
+    "composer_packages":  null,
+    "meta":  {
+                 "status":  "enabled",
+                 "load_order":  1
+             }
+}

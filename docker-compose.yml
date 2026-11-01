@@ -1,0 +1,105 @@
+# STX Enterprises - Master Unified Monorepo Docker Compose
+# Orchestrates: STX Panel, MariaDB Database, Redis Cache, Status Page & Wings Node
+
+services:
+  database:
+    image: mariadb:10.11
+    container_name: stx-database
+    restart: always
+    command: --default-authentication-plugin=mysql_native_password
+    volumes:
+      - stx-db:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-SUPERNEEDSTOCHANGE}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-NEEDSTOCHANGE}
+      MYSQL_DATABASE: ${DB_DATABASE:-panel}
+      MYSQL_USER: ${DB_USER:-pelican}
+    networks:
+      - stx-network
+
+  cache:
+    image: redis:alpine
+    container_name: stx-cache
+    restart: always
+    networks:
+      - stx-network
+
+  panel:
+    build:
+      context: ./panel
+      dockerfile: Dockerfile
+    container_name: stx-panel
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - database
+      - cache
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - stx-panel-data:/pelican-data
+      - stx-panel-logs:/var/www/html/storage/logs
+      - ./panel/plugins:/var/www/html/plugins
+      - ./panel/resources/views/filament/layouts/footer.blade.php:/var/www/html/resources/views/filament/layouts/footer.blade.php
+      - ./panel/app/Providers/Filament/FilamentServiceProvider.php:/var/www/html/app/Providers/Filament/FilamentServiceProvider.php
+      - ./panel/app/Filament/Admin/Widgets:/var/www/html/app/Filament/Admin/Widgets
+      - ./panel/app/Filament/Admin/Pages/Dashboard.php:/var/www/html/app/Filament/Admin/Pages/Dashboard.php
+      - ./panel/resources/views/filament/widgets:/var/www/html/resources/views/filament/widgets
+      - ./panel/lang/en/admin/dashboard.php:/var/www/html/lang/en/admin/dashboard.php
+    environment:
+      APP_NAME: "STX Enterprises"
+      APP_URL: "${APP_URL:-http://localhost}"
+      APP_DEBUG: "${APP_DEBUG:-false}"
+      APP_ENV: "${APP_ENV:-production}"
+      APP_INSTALLED: "true"
+      XDG_DATA_HOME: /pelican-data
+      CACHE_STORE: "redis"
+      SESSION_DRIVER: "redis"
+      QUEUE_CONNECTION: "redis"
+      REDIS_HOST: "cache"
+      DB_CONNECTION: "mariadb"
+      DB_HOST: "database"
+      DB_PORT: "3306"
+      DB_DATABASE: ${DB_DATABASE:-panel}
+      DB_USERNAME: ${DB_USER:-pelican}
+      DB_PASSWORD: ${DB_PASSWORD:-NEEDSTOCHANGE}
+      MAIL_MAILER: "smtp"
+      MAIL_HOST: "${MAIL_HOST:-smtp.mailgun.org}"
+      MAIL_PORT: "${MAIL_PORT:-587}"
+      MAIL_FROM: "${MAIL_FROM:-billing@stxenterprises.lk}"
+      MAIL_FROM_NAME: "STX Enterprises"
+      MAIL_USERNAME: "${MAIL_USERNAME:-}"
+      MAIL_PASSWORD: "${MAIL_PASSWORD:-}"
+      MAIL_ENCRYPTION: "${MAIL_ENCRYPTION:-tls}"
+    networks:
+      - stx-network
+
+  status-page:
+    build:
+      context: ./status-page
+      dockerfile: Dockerfile
+    container_name: stx-status-page
+    restart: unless-stopped
+    ports:
+      - "34500:3000"
+    volumes:
+      - ./status-page/data:/app/data
+    environment:
+      - TZ=Asia/Colombo
+      - ADMIN_PASSWORD=${STATUS_ADMIN_PASSWORD:-changeme}
+      - SESSION_SECRET=${STATUS_SESSION_SECRET:-stx-status-secret-change-in-production}
+    cap_add:
+      - NET_RAW
+    networks:
+      - stx-network
+
+volumes:
+  stx-db:
+  stx-panel-data:
+  stx-panel-logs:
+
+networks:
+  stx-network:
+    driver: bridge

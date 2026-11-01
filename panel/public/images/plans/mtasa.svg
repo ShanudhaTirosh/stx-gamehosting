@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 340" width="100%" height="100%">
+  <defs>
+    <linearGradient id="mtaBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="50%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#090d16" />
+    </linearGradient>
+    <linearGradient id="mtaYellow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#eab308" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+    <filter id="mtaGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <rect width="600" height="340" rx="20" fill="url(#mtaBg)" />
+  <rect width="598" height="338" x="1" y="1" rx="19" fill="none" stroke="rgba(234, 179, 8, 0.3)" stroke-width="1.5" />
+
+  <!-- Speedometer Graphic -->
+  <g transform="translate(300, 160)">
+    <path d="M -90,0 A 90 90 0 0 1 90 0" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="16" />
+    <path d="M -90,0 A 90 90 0 0 1 60 -67" fill="none" stroke="url(#mtaYellow)" stroke-width="16" filter="url(#mtaGlow)" />
+    <!-- Ticks -->
+    <line x1="-70" y1="0" x2="-60" y2="0" stroke="#fff" stroke-width="2" />
+    <line x1="0" y1="-70" x2="0" x2="-60" stroke="#fff" stroke-width="2" />
+    <line x1="70" y1="0" x2="60" y2="0" stroke="#ef4444" stroke-width="3" />
+    <!-- Center Needle -->
+    <circle cx="0" cy="0" r="12" fill="#eab308" filter="url(#mtaGlow)" />
+    <line x1="0" y1="0" x2="55" y2="-50" stroke="#f59e0b" stroke-width="4" stroke-linecap="round" filter="url(#mtaGlow)" />
+  </g>
+
+  <!-- Tag Pills -->
+  <g transform="translate(110, 60)" filter="url(#mtaGlow)">
+    <rect width="90" height="28" rx="8" fill="rgba(234, 179, 8, 0.2)" stroke="#eab308" stroke-width="1.5" />
+    <text x="45" y="19" fill="#fef08a" font-family="system-ui, sans-serif" font-size="10" font-weight="900" text-anchor="middle" letter-spacing="1">MTA 1.6+ READY</text>
+  </g>
+  <g transform="translate(400, 60)" filter="url(#mtaGlow)">
+    <rect width="95" height="28" rx="8" fill="rgba(56, 189, 248, 0.2)" stroke="#38bdf8" stroke-width="1.5" />
+    <text x="47" y="19" fill="#7dd3fc" font-family="system-ui, sans-serif" font-size="10" font-weight="900" text-anchor="middle" letter-spacing="1">LUA JIT ACCEL</text>
+  </g>
+
+  <text x="300" y="315" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="12" font-weight="700" text-anchor="middle" letter-spacing="2">
+    STX ENTERPRISES • MULTI THEFT AUTO RACING & FREEROAM
+  </text>
+</svg>

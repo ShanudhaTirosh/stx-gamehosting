@@ -1,0 +1,503 @@
+<?php
+
+namespace App\Models;
+
+use App\Contracts\Plugins\HasPluginSettings;
+use App\Enums\PluginCategory;
+use App\Enums\PluginStatus;
+use App\Exceptions\PluginIdMismatchException;
+use App\Facades\Plugins;
+use App\Services\Helpers\HubCredentials;
+use App\Services\Helpers\SoftwareVersionService;
+use Exception;
+use Filament\Schemas\Components\Component;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
+use JsonException;
+use Sushi\Sushi;
+use Throwable;
+
+/**
+ * @property string $id
+ * @property string $name
+ * @property string $author
+ * @property string $version
+ * @property string|null $description
+ * @property PluginCategory $category
+ * @property string|null $url
+ * @property string|null $update_url
+ * @property string $namespace
+ * @property string $class
+ * @property string|null $panels
+ * @property string|null $panel_version
+ * @property int|null $api_version
+ * @property string|null $composer_packages
+ * @property PluginStatus $status
+ * @property string|null $status_message
+ * @property int $load_order
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Plugin newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Plugin newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Plugin query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Plugin whereAuthor($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Plugin whereCategory($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Plugin whereClass($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Plugin whereComposerPackages($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Plugin whereDescription($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Plugin whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Plugin whereLoadOrder($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Plugin whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Plugin whereNamespace($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Plugin wherePanelVersion($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Plugin wherePanels($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Plugin whereStatus($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Plugin whereStatusMessage($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Plugin whereUpdateUrl($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Plugin whereUrl($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Plugin whereVersion($value)
+ */
+class Plugin extends Model implements HasPluginSettings
+{
+    use Sushi;
+
+    public const RESOURCE_NAME = 'plugin';
+
+    /** The highest plugin.json api_version this panel supports. */
+    public const SUPPORTED_API_VERSION = 1;
+
+    protected $primaryKey = 'id';
+
+    protected $keyType = 'string';
+
+    public $incrementing = false;
+
+    protected $fillable = [
+        'status',
+        'status_message',
+        'load_order',
+    ];
+
+    /** @return string[] */
+    public function getSchema(): array
+    {
+        return [
+            'id' => 'string',
+            'name' => 'string',
+            'author' => 'string',
+            'version' => 'string',
+            'description' => 'string',
+            'category' => 'string',
+            'url' => 'string',
+            'update_url' => 'string',
+            'namespace' => 'string',
+            'class' => 'string',
+            'panels' => 'string',
+            'panel_version' => 'string',
+            'api_version' => 'integer',
+            'composer_packages' => 'string',
+            'status' => 'string',
+            'status_message' => 'string',
+            'load_order' => 'integer',
+        ];
+    }
+
+    /**
+     * @return array<array{
+     *     id: string,
+     *     name: string,
+     *     author: string,
+     *     version: string,
+     *     description: ?string,
+     *     category: string,
+     *     url: ?string,
+     *     update_url: ?string,
+     *     namespace: string,
+     *     class: string,
+     *     panels: ?string,
+     *     panel_version: ?string,
+     *     api_version: ?int,
+     *     composer_packages: ?string,
+     *     status: string,
+     *     status_message: ?string,
+     *     load_order: int
+     * }>
+     */
+    public function getRows(): array
+    {
+        $plugins = [];
+
+        $directories = File::directories(base_path('plugins/'));
+        foreach ($directories as $directory) {
+            $plugin = File::basename($directory);
+
+            $path = plugin_path($plugin, 'plugin.json');
+            if (!file_exists($path)) {
+                continue;
+            }
+
+            try {
+                $data = File::json($path, JSON_THROW_ON_ERROR);
+                $data['id'] = Str::lower($data['id']);
+
+                throw_if($data['id'] !== Str::lower($plugin), new PluginIdMismatchException("Plugin id mismatch for folder name ($plugin) and id in plugin.json ({$data['id']})!"));
+
+                $panels = null;
+                if (array_key_exists('panels', $data)) {
+                    $panels = $data['panels'];
+                    $panels = is_array($panels) ? implode(',', $panels) : $panels;
+                }
+
+                $composerPackages = null;
+                if (array_key_exists('composer_packages', $data)) {
+                    $composerPackages = $data['composer_packages'];
+                    $composerPackages = is_array($composerPackages) ? json_encode($composerPackages, JSON_THROW_ON_ERROR) : $composerPackages;
+                }
+
+                $data = [
+                    'id' => $data['id'],
+                    'name' => $data['name'],
+                    'author' => $data['author'],
+                    'version' => Arr::get($data, 'version', '1.0.0'),
+                    'description' => Arr::get($data, 'description', null),
+                    'category' => $data['category'],
+                    'url' => Arr::get($data, 'url', null),
+                    'update_url' => Arr::get($data, 'update_url', null),
+                    'namespace' => $data['namespace'],
+                    'class' => $data['class'],
+                    'panels' => $panels,
+                    'panel_version' => Arr::get($data, 'panel_version', null),
+                    'api_version' => Arr::get($data, 'api_version', null),
+                    'composer_packages' => $composerPackages,
+
+                    'status' => Str::lower(Arr::get($data, 'meta.status', PluginStatus::NotInstalled->value)),
+                    'status_message' => Arr::get($data, 'meta.status_message', null),
+                    'load_order' => Arr::integer($data, 'meta.load_order', 0),
+                ];
+
+                $plugins[] = $data;
+            } catch (Exception $exception) {
+                throw_if(config('panel.plugin.dev_mode', false), ($exception));
+
+                report($exception);
+
+                if (!$exception instanceof JsonException) {
+                    $plugins[] = [
+                        'id' => $exception instanceof PluginIdMismatchException ? $plugin : ($data['id'] ?? Str::uuid()),
+                        'name' => $data['name'] ?? Str::headline($plugin),
+                        'author' => $data['author'] ?? 'Unknown',
+                        'version' => $data['version'] ?? '0.0.0',
+                        'description' => $exception instanceof PluginIdMismatchException ? $exception->getMessage() : 'Plugin.json is invalid!',
+                        'category' => PluginCategory::Plugin->value,
+                        'url' => $data['url'] ?? null,
+                        'update_url' => null,
+                        'namespace' => 'Error',
+                        'class' => 'Error',
+                        'panels' => null,
+                        'panel_version' => null,
+                        'api_version' => null,
+                        'composer_packages' => null,
+
+                        'status' => PluginStatus::Errored->value,
+                        'status_message' => $exception->getMessage(),
+                        'load_order' => 0,
+                    ];
+                }
+            }
+        }
+
+        return $plugins;
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'status' => PluginStatus::class,
+            'category' => PluginCategory::class,
+        ];
+    }
+
+    public function fullClass(): string
+    {
+        return '\\' . $this->namespace . '\\' . $this->class;
+    }
+
+    public function shouldLoad(?string $panelId = null): bool
+    {
+        if ($this->fullClass() === '\\Error\\Error') {
+            return false;
+        }
+
+        if ($panelId) {
+            if ($this->panels && !in_array($panelId, explode(',', $this->panels)) && $this->category === PluginCategory::Plugin) {
+                return false;
+            }
+        }
+
+        return $this->status === PluginStatus::Enabled || $this->status === PluginStatus::Errored;
+    }
+
+    public function canEnable(): bool
+    {
+        return ($this->status === PluginStatus::Disabled || $this->status === PluginStatus::Crashed) && $this->isCompatible();
+    }
+
+    public function canDisable(): bool
+    {
+        return $this->status === PluginStatus::Enabled || $this->status === PluginStatus::Incompatible;
+    }
+
+    public function isCompatible(): bool
+    {
+        $currentPanelVersion = App::call(fn (SoftwareVersionService $service) => $service->currentComparableVersion());
+
+        if (!$this->panel_version || $currentPanelVersion === null) {
+            return true;
+        }
+
+        if ($this->isPanelVersionStrict()) {
+            return version_compare($currentPanelVersion, $this->panel_version, '=');
+        }
+
+        // ^X.Y.Z means >=X.Y.Z and below the next major, like composer's caret,
+        // capping at the next minor for 0.x and the next patch for 0.0.x
+        $parts = explode('.', ltrim($this->panel_version, '^'));
+        $minimum = implode('.', array_pad($parts, 3, '0'));
+        $upper = match (true) {
+            $parts[0] !== '0' || !isset($parts[1]) => ((int) $parts[0] + 1) . '.0.0',
+            $parts[1] !== '0' || !isset($parts[2]) => '0.' . ((int) $parts[1] + 1) . '.0',
+            default => '0.0.' . ((int) $parts[2] + 1),
+        };
+
+        // ponytail: prereleases of the upper bound (2.0.0-rc1 vs ^1.0) pass version_compare's '<'
+        // where composer would exclude them; swap to composer/semver if that ever bites
+        return version_compare($currentPanelVersion, $minimum, '>=') && version_compare($currentPanelVersion, $upper, '<');
+    }
+
+    public function effectiveApiVersion(): int
+    {
+        return $this->api_version ?? 1;
+    }
+
+    public function isApiVersionSupported(): bool
+    {
+        return $this->effectiveApiVersion() <= self::SUPPORTED_API_VERSION;
+    }
+
+    public function isPanelVersionStrict(): bool
+    {
+        if (!$this->panel_version) {
+            return false;
+        }
+
+        return !str($this->panel_version)->startsWith('^');
+    }
+
+    public function isTheme(): bool
+    {
+        return $this->category === PluginCategory::Theme;
+    }
+
+    public function isLanguage(): bool
+    {
+        return $this->category === PluginCategory::Language;
+    }
+
+    /** @return null|array<string, array{version: string, download_url: string, sha256?: string}> */
+    private function getUpdateData(): ?array
+    {
+        if (!$this->update_url) {
+            return null;
+        }
+
+        return cache()->remember("plugins.$this->id.update", now()->addMinutes(10), function () {
+            try {
+                $data = HubCredentials::request($this->update_url)
+                    ->timeout(5)->connectTimeout(1)->get($this->update_url)->throw()->json();
+
+                // Support update jsons that cover multiple plugins
+                if (array_key_exists($this->id, $data)) {
+                    $data = $data[$this->id];
+                }
+
+                return $data;
+            } catch (Exception $exception) {
+                report($exception);
+            }
+
+            return [];
+        });
+    }
+
+    /** @return null|array{version: string, download_url: string, sha256?: string} */
+    private function getUpdateEntry(): ?array
+    {
+        $panelVersion = App::call(fn (SoftwareVersionService $service) => $service->currentComparableVersion());
+
+        if ($panelVersion === null) {
+            return null;
+        }
+
+        $updateData = $this->getUpdateData();
+        if ($updateData) {
+            if (array_key_exists($panelVersion, $updateData)) {
+                return $updateData[$panelVersion];
+            }
+
+            if (array_key_exists('*', $updateData)) {
+                return $updateData['*'];
+            }
+        }
+
+        return null;
+    }
+
+    public function isUpdateAvailable(): bool
+    {
+        $entry = $this->getUpdateEntry();
+
+        if ($entry === null) {
+            return false;
+        }
+
+        return version_compare($entry['version'], $this->version, '>');
+    }
+
+    public function getDownloadUrlForUpdate(): ?string
+    {
+        return $this->getUpdateEntry()['download_url'] ?? null;
+    }
+
+    /**
+     * Download URL and advertised checksum taken from one read of the update
+     * feed, so the two always describe the same archive. The checksum is null
+     * only when the feed doesn't include one; a present but empty or invalid
+     * value is kept so verification rejects it.
+     *
+     * @return null|array{url: string, sha256: ?string}
+     */
+    public function getUpdateDownload(): ?array
+    {
+        $entry = $this->getUpdateEntry();
+
+        if (blank($entry['download_url'] ?? null)) {
+            return null;
+        }
+
+        $sha256 = null;
+        if (array_key_exists('sha256', $entry)) {
+            $sha256 = (string) $entry['sha256'];
+        }
+
+        return ['url' => (string) $entry['download_url'], 'sha256' => $sha256];
+    }
+
+    public function hasSettings(): bool
+    {
+        try {
+            $pluginObject = new ($this->fullClass());
+
+            return $pluginObject instanceof HasPluginSettings;
+        } catch (Throwable) {
+        }
+
+        return false;
+    }
+
+    /** @return array<string, mixed> */
+    public function getSettingsFormData(): array
+    {
+        try {
+            $pluginObject = new ($this->fullClass());
+
+            if ($pluginObject instanceof HasPluginSettings) {
+                return $pluginObject->getSettingsFormData();
+            }
+        } catch (Throwable) {
+        }
+
+        return [];
+    }
+
+    /** @return Component[] */
+    public function getSettingsForm(): array
+    {
+        try {
+            $pluginObject = new ($this->fullClass());
+
+            if ($pluginObject instanceof HasPluginSettings) {
+                return $pluginObject->getSettingsForm();
+            }
+        } catch (Throwable) {
+        }
+
+        return [];
+    }
+
+    /** @param  array<mixed, mixed>  $data */
+    public function saveSettings(array $data): void
+    {
+        try {
+            $pluginObject = new ($this->fullClass());
+
+            if ($pluginObject instanceof HasPluginSettings) {
+                $pluginObject->saveSettings($data);
+            }
+        } catch (Throwable) {
+        }
+    }
+
+    /** @return string[] */
+    public function getProviders(): array
+    {
+        $path = plugin_path($this->id, 'src', 'Providers');
+
+        if (File::missing($path)) {
+            return [];
+        }
+
+        return array_map(fn ($provider) => $this->namespace . '\\Providers\\' . str($provider->getRelativePathname())->remove('.php', false), File::allFiles($path));
+    }
+
+    /** @return string[] */
+    public function getCommands(): array
+    {
+        $path = plugin_path($this->id, 'src', 'Console', 'Commands');
+
+        if (File::missing($path)) {
+            return [];
+        }
+
+        return array_map(fn ($provider) => $this->namespace . '\\Console\\Commands\\' . str($provider->getRelativePathname())->remove('.php', false), File::allFiles($path));
+    }
+
+    public function getSeeder(): ?string
+    {
+        $name = Str::studly($this->name);
+        $seeder = "\Database\Seeders\\{$name}Seeder";
+
+        return class_exists($seeder) ? $seeder : null;
+    }
+
+    public function getReadme(): ?string
+    {
+        return cache()->remember("plugins.$this->id.readme", now()->addMinutes(5), function () {
+            $path = plugin_path($this->id, 'README.md');
+
+            if (File::missing($path)) {
+                return null;
+            }
+
+            return File::get($path);
+        });
+    }
+
+    public static function refreshRows(): void
+    {
+        unset(static::$booted[static::class], static::$bootedCallbacks[static::class]);
+
+        static::$sushiConnection = null;
+    }
+}

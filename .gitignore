@@ -1,0 +1,73 @@
+# ==========================================
+# STX Enterprises Monorepo .gitignore
+# ==========================================
+
+# Backups & Archives
+.backups/
+*.tar.gz
+*.zip
+
+# Operating System & IDE Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Environment Variables & Secrets
+.env
+.env.backup
+.env.production
+.env.local
+.env.*.local
+!.env.example
+!sample.env
+
+# Node.js & Webpack / Next.js Build Artifacts
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-debug.log*
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+.eslintcache
+
+# PHP / Laravel Framework Artifacts
+/panel/vendor/
+/panel/public/build/
+/panel/public/storage/
+/panel/storage/*.key
+/panel/storage/logs/*
+!/panel/storage/logs/.gitignore
+/panel/storage/framework/cache/*
+!/panel/storage/framework/cache/.gitignore
+/panel/storage/framework/sessions/*
+!/panel/storage/framework/sessions/.gitignore
+/panel/storage/framework/views/*
+!/panel/storage/framework/views/.gitignore
+/panel/.phpunit.cache
+/panel/.phpunit.result.cache
+
+# Golang / Wings Binaries
+wings/wings
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
