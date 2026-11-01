@@ -1,100 +1,115 @@
 # syntax=docker.io/docker/dockerfile:1.13-labs
-# Pelican Production Dockerfile
-
-##
-#  If you want to build this locally you want to run `docker build -f Dockerfile.dev .`
-##
+# STX Enterprises - Full Multi-Stage Source Production Dockerfile
+# Builds everything from source: PHP 8.5 extensions, Composer dependencies, Yarn Vite frontend assets, and all pre-installed plugins.
 
 # ================================
-# Stage 1-1: Composer Install
+# Stage 1: Base PHP 8.5 Image with Extensions
 # ================================
-FROM --platform=$TARGETOS/$TARGETARCH localhost:5000/base-php:$TARGETARCH AS composer
+FROM --platform=$TARGETOS/$TARGETARCH php:8.5-fpm-alpine AS base
+
+ADD --chmod=0755 https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
+
+RUN install-php-extensions bcmath gd intl zip opcache pcntl pdo_mysql pdo_pgsql bz2
+
+RUN rm /usr/local/bin/install-php-extensions
+
+# Use production php.ini as baseline
+RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
+
+# ================================
+# Stage 2: Composer Dependencies
+# ================================
+FROM --platform=$TARGETOS/$TARGETARCH base AS composer
 
 WORKDIR /build
 
 COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
 
-# Copy bare minimum to install Composer dependencies
+# Copy composer definitions
 COPY composer.json composer.lock ./
 
 RUN composer install --no-dev --no-interaction --no-autoloader --no-scripts
 
 # ================================
-# Stage 1-2: Yarn Install
+# Stage 3: Yarn Frontend Dependencies
 # ================================
 FROM --platform=$TARGETOS/$TARGETARCH node:22-alpine AS yarn
 
 WORKDIR /build
 
-# Copy bare minimum to install Yarn dependencies
 COPY package.json yarn.lock ./
 
 RUN yarn config set network-timeout 300000 \
     && yarn install --frozen-lockfile
 
 # ================================
-# Stage 2-1: Composer Optimize
+# Stage 4: Composer Autoload & Plugins Integration
 # ================================
 FROM --platform=$TARGETOS/$TARGETARCH composer AS composerbuild
 
-# Copy full code to optimize autoload
+# Copy entire source code (including panel plugins, custom controllers, providers)
 COPY --exclude=docker/ . ./
 
 RUN composer dump-autoload --optimize
 
+# Pre-resolve composer dependencies for all plugins
+RUN php artisan p:plugin:composer
+
 # ================================
-# Stage 2-2: Build Frontend Assets
+# Stage 5: Build Frontend Assets (Vite)
 # ================================
 FROM --platform=$TARGETOS/$TARGETARCH yarn AS yarnbuild
 
 WORKDIR /build
 
-# Copy full code
+# Copy source code and vendor autoload
 COPY --exclude=docker/ . ./
 COPY --from=composer /build .
 
 RUN yarn run build
 
 # ================================
-# Stage 5: Build Final Application Image
+# Stage 6: Final Production Application Image
 # ================================
-FROM --platform=$TARGETOS/$TARGETARCH localhost:5000/base-php:$TARGETARCH AS final
+FROM --platform=$TARGETOS/$TARGETARCH base AS final
+
+LABEL maintainer="STX Enterprises Lanka (Pvt) Ltd"
+LABEL description="STX Enterprises - Commercial Cloud & Game Server Control Plane"
 
 WORKDIR /var/www/html
 
+# Install required system packages
 RUN apk add --no-cache \
-    # packages for running the panel
-    caddy ca-certificates supervisor supercronic fcgi \
-    # required for installing plugins. Pulled from https://github.com/pelican/panel/pull/2034
+    caddy ca-certificates supervisor supercronic fcgi coreutils \
     zip unzip 7zip bzip2-dev yarn git
 
-# Copy composer binary for runtime plugin dependency management
+# Copy composer binary for runtime maintenance
 COPY --from=composer /usr/local/bin/composer /usr/local/bin/composer
+
+# Copy built application source code & compiled Vite public assets
 COPY --chown=root:www-data --chmod=770 --from=composerbuild /build .
 COPY --chown=root:www-data --chmod=770 --from=yarnbuild /build/public ./public
 
-# Create and remove directories
+# Setup Pelican volume directory structure and symlinks
 RUN mkdir -p /pelican-data/storage /var/run/supervisord \
-# Symlinks for env, database, storage
-    && ln -s  /pelican-data/.env /var/www/html/.env \
-    && ln -s  /pelican-data/database/database.sqlite ./database/database.sqlite \
-    && ln -s  /pelican-data/storage /var/www/html/public/storage \
-    && ln -s  /pelican-data/storage /var/www/html/storage/app/public \
-# Allow www-data write permissions where necessary
-    && chown -R www-data: /pelican-data .env ./storage ./bootstrap/cache /var/run/supervisord /var/www/html/public/storage \
-    && chmod -R 770 /pelican-data ./storage ./bootstrap/cache /var/run/supervisord \
-    && chown -R www-data: /usr/local/etc/php/ /usr/local/etc/php-fpm.d/ /var/www/html/composer.json /var/www/html/composer.lock
-# Configure PHP and PHP-FPM
+    && ln -s /pelican-data/.env /var/www/html/.env \
+    && ln -s /pelican-data/database/database.sqlite ./database/database.sqlite \
+    && ln -s /pelican-data/storage /var/www/html/public/storage \
+    && ln -s /pelican-data/storage /var/www/html/storage/app/public \
+    && chown -R www-data:www-data /pelican-data ./storage ./bootstrap/cache /var/run/supervisord /var/www/html/public/storage /var/www/html/plugins \
+    && chmod -R 775 /pelican-data ./storage ./bootstrap/cache /var/run/supervisord /var/www/html/plugins \
+    && chown -R www-data:www-data /usr/local/etc/php/ /usr/local/etc/php-fpm.d/ /var/www/html/composer.json /var/www/html/composer.lock
+
+# Copy server & daemon configurations
 COPY docker/php/pelican.ini /usr/local/etc/php/conf.d/zz-pelican.ini
 COPY docker/php/pelican-pool.conf /usr/local/etc/php-fpm.d/zz-pelican.conf
-# Configure Supervisor
 COPY docker/supervisord.conf /etc/supervisord.conf
 COPY docker/Caddyfile /etc/caddy/Caddyfile
-# Add Laravel scheduler to crontab
 COPY docker/crontab /etc/crontabs/crontab
 
 COPY docker/entrypoint.sh /entrypoint.sh
 COPY docker/healthcheck.sh /healthcheck.sh
+RUN chmod +x /entrypoint.sh /healthcheck.sh
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=2m --retries=3 \
   CMD /bin/ash /healthcheck.sh
