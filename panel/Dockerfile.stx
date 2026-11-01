@@ -1,0 +1,27 @@
+# STX Enterprises - Pre-configured Unified Panel Image
+# Base: Official Pelican Panel release image
+FROM ghcr.io/pelican/panel:latest
+
+LABEL maintainer="STX Enterprises Lanka (Pvt) Ltd"
+LABEL description="STX Enterprises Commercial Cloud & Game Server Panel with pre-configured plugins"
+
+USER root
+
+# 1. Copy pre-installed plugins into the container webroot with correct ownership
+COPY --chown=www-data:www-data ./plugins /var/www/html/plugins
+
+# 2. Copy branded layouts, providers, custom dashboard widgets & translations
+COPY --chown=www-data:www-data ./resources/views/filament/layouts/footer.blade.php /var/www/html/resources/views/filament/layouts/footer.blade.php
+COPY --chown=www-data:www-data ./app/Providers/Filament/FilamentServiceProvider.php /var/www/html/app/Providers/Filament/FilamentServiceProvider.php
+COPY --chown=www-data:www-data ./app/Filament/Admin/Widgets /var/www/html/app/Filament/Admin/Widgets
+COPY --chown=www-data:www-data ./app/Filament/Admin/Pages/Dashboard.php /var/www/html/app/Filament/Admin/Pages/Dashboard.php
+COPY --chown=www-data:www-data ./resources/views/filament/widgets /var/www/html/resources/views/filament/widgets
+COPY --chown=www-data:www-data ./lang/en/admin/dashboard.php /var/www/html/lang/en/admin/dashboard.php
+
+# 3. Ensure permissions and pre-resolve plugin dependencies
+RUN chmod -R 775 /var/www/html/plugins \
+    && su www-data -s /bin/ash -c "php artisan p:plugin:composer" \
+    && su www-data -s /bin/ash -c "php artisan p:plugin:disable user-creatable-servers" \
+    && su www-data -s /bin/ash -c "php artisan filament:optimize" \
+    && su www-data -s /bin/ash -c "php artisan view:cache"
+
