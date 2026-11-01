@@ -103,3 +103,4 @@ volumes:
 networks:
   stx-network:
     driver: bridge
+

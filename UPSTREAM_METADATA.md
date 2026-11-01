@@ -25,3 +25,4 @@ This monorepo unifies the following sub-repositories into a single codebase:
 ## 4. Status Page
 - **Description**: Next.js 15 Uptime Monitoring application with SQLite telemetry history, incident tracking, and Asia/Colombo timezones.
 - **Location**: `status-page/`
+
