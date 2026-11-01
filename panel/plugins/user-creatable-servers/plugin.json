@@ -13,8 +13,9 @@
     "panel_version": null,
     "api_version": 1,
     "meta": {
-        "status": "enabled",
-        "load_order": 1
+        "status": "disabled",
+        "load_order": 1,
+        "status_message": null
     },
     "composer_packages": null
 }
