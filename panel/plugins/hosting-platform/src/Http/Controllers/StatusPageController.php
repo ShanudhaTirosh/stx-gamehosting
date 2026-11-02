@@ -122,10 +122,10 @@ class StatusPageController extends Controller
     /**
      * Fast live JSON health ping endpoint.
      */
-    public function ping(StatusCheckerService $checker): JsonResponse
+    public function ping(): JsonResponse
     {
-        $results = $checker->checkAll();
-
+        // Read-only on purpose: probes run from the scheduler. A public endpoint must never be able
+        // to trigger outbound checks on demand.
         $monitors = StatusMonitor::where('is_active', true)->get();
         $anyDown = $monitors->contains('current_status', 'down');
         $anyDegraded = $monitors->contains('current_status', 'degraded');
@@ -133,8 +133,8 @@ class StatusPageController extends Controller
         return response()->json([
             'status' => $anyDown ? 'error' : ($anyDegraded ? 'degraded' : 'healthy'),
             'timestamp' => now()->toISOString(),
-            'monitors_checked' => count($results),
-            'system_time' => now()->format('Y-m-d H:i:s T'),
+            'monitors' => $monitors->count(),
+            'last_checked_at' => optional($monitors->max('last_checked_at'))->toISOString(),
         ]);
     }
 
@@ -274,11 +274,8 @@ class StatusPageController extends Controller
                 } elseif ($hasGood) {
                     $status = 'good';
                 }
-            } elseif ($monitor->is_active && $monitor->created_at <= $bEnd) {
-                // If monitor was created and running, assume operational historical state if checks were cleared
-                $status = $monitor->current_status === 'down' ? 'bad' : 'good';
-                $avgLatency = $monitor->current_latency_ms ?: 5.0;
             }
+            // No checks in this window means no data. Never fill the gap with an assumed "good".
 
             $timeFormat = in_array($range, ['30d', '90d']) ? 'M d' : ($range === '24h' ? 'H:i' : 'H:i:s');
 

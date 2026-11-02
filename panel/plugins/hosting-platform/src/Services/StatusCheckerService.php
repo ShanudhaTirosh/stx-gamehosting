@@ -169,7 +169,7 @@ class StatusCheckerService
     {
         $defaults = [
             [
-                'name' => 'STX Info & Docs Portal',
+                'name' => 'Website',
                 'slug' => 'stx-info-portal',
                 'type' => 'http',
                 'target_url' => 'https://info.shanutechx.com',
@@ -178,10 +178,10 @@ class StatusCheckerService
                 'check_interval_seconds' => 30,
                 'timeout_seconds' => 8,
                 'sort_order' => 1,
-                'description' => 'Official STX Enterprises knowledge base, customer documentation and portal gateway.',
+                'description' => 'Public website and documentation.',
             ],
             [
-                'name' => 'STX Core Control Panel (Local)',
+                'name' => 'Control panel',
                 'slug' => 'stx-control-panel',
                 'type' => 'http',
                 'target_url' => 'http://localhost/status',
@@ -190,10 +190,10 @@ class StatusCheckerService
                 'check_interval_seconds' => 30,
                 'timeout_seconds' => 5,
                 'sort_order' => 2,
-                'description' => 'Main Pelican / STX Game Management Web Application and storefront.',
+                'description' => 'Storefront and game server control panel.',
             ],
             [
-                'name' => 'STX High-Availability MariaDB Database',
+                'name' => 'Database',
                 'slug' => 'stx-mariadb-cluster',
                 'type' => 'database',
                 'target_url' => 'database:3306',
@@ -202,10 +202,10 @@ class StatusCheckerService
                 'check_interval_seconds' => 30,
                 'timeout_seconds' => 3,
                 'sort_order' => 3,
-                'description' => 'Central ACID transactional database for orders, users, and game server allocations.',
+                'description' => 'Stores orders, users and server records.',
             ],
             [
-                'name' => 'STX Distributed Redis Cache & Sessions',
+                'name' => 'Cache and queue',
                 'slug' => 'stx-redis-cache',
                 'type' => 'redis',
                 'target_url' => 'cache:6379',
@@ -214,7 +214,7 @@ class StatusCheckerService
                 'check_interval_seconds' => 30,
                 'timeout_seconds' => 3,
                 'sort_order' => 4,
-                'description' => 'In-memory Redis instance for caching, queue jobs, and real-time session handling.',
+                'description' => 'Handles caching, background jobs and sessions.',
             ],
             [
                 'name' => 'Wings Compute Node 01 — Sri Lanka (Colombo DC)',
