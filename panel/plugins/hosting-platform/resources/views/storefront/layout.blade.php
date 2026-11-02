@@ -144,6 +144,15 @@
             </div>
             <div class="flex items-center gap-4 text-gray-400 text-xs">
                 <a href="{{ route('hosting.status.index') }}" class="hover:text-emerald-400 transition flex items-center gap-1.5">
+        .stx-input { width:100%; padding:.7rem .85rem; background:var(--bg); border:1px solid var(--line2); border-radius:2px; color:var(--text); font-size:.95rem; }
+        .stx-input:focus { outline:none; border-color:var(--acc); }
+        .stx-input::placeholder { color:#5C626C; }
+        .stx-field > label { display:block; margin-bottom:.4rem; }
+        .stx-hint { font-size:.8rem; color:var(--mut); margin-top:.35rem; }
+        .stx-choice { display:flex; gap:.75rem; padding:.9rem 1rem; border:1px solid var(--line2); border-radius:2px; cursor:pointer; transition:border-color .15s, background .15s; }
+        .stx-choice:hover { border-color: var(--mut); }
+        .stx-choice:has(input:checked) { border-color: var(--acc); background: rgba(212,255,58,.05); }
+        .stx-choice input { accent-color: var(--acc); margin-top:.3rem; }
                     <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Live Telemetry: 99.98% SLA
                 </a>
                 <span>•</span>
