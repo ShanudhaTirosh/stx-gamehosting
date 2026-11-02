@@ -17,7 +17,7 @@
                 </div>
                 <div>
                     <div class="flex items-center gap-3">
-                        <span class="text-xs font-mono font-bold text-gray-400">{{ $order->order_number }}</span>
+                        <span class="text-xs font-mono font-bold text-gray-400">{{ $order->isRenewal() ? 'Renewal' : 'Order' }} {{ $order->order_number }}</span>
                         <span class="px-2.5 py-0.5 rounded-full text-xs font-bold 
                             @if($order->status === \BrandedHosting\Platform\Enums\OrderStatus::Completed) bg-emerald-500/20 text-emerald-300
                             @elseif($order->status === \BrandedHosting\Platform\Enums\OrderStatus::Rejected) bg-red-500/20 text-red-300
@@ -27,7 +27,7 @@
                         </span>
                     </div>
                     <h1 class="text-2xl font-black text-white mt-1">{{ $order->plan?->name ?? 'Server Plan' }}</h1>
-                    <p class="text-xs text-gray-400 mt-0.5">Created on {{ $order->created_at->format('M d, Y • h:i A') }}</p>
+                    <p class="text-xs text-gray-400 mt-0.5">{{ $order->isRenewal() ? 'Issued' : 'Placed' }} {{ $order->created_at->format('M d, Y • h:i A') }}@if($renewsOrder) &middot; renews <a href="{{ route('hosting.order.tracking', $renewsOrder->uuid) }}" class="underline text-brand-400">{{ $renewsOrder->order_number }}</a>@endif</p>
                 </div>
             </div>
 
@@ -148,24 +148,43 @@
                         </div>
                     </div>
                 @else
-                    <!-- Active or Completed State -->
-                    <div class="p-8 rounded-2xl bg-gray-900 border border-gray-800 text-center space-y-4">
-                        <div class="w-16 h-16 rounded-full bg-emerald-950 border border-emerald-800 text-emerald-400 flex items-center justify-center text-3xl mx-auto">
-                            <i class="ti ti-check"></i>
-                        </div>
-                        <h2 class="text-2xl font-bold text-white">Your Server Is Ready!</h2>
-                        <p class="text-sm text-gray-300 max-w-md mx-auto">
-                            Payment was verified and your container has been allocated and started on our server infrastructure.
-                        </p>
-                        @if($order->server)
-                            <div class="pt-4">
-                                <a href="/server/{{ $order->server->uuid_short }}" class="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl font-bold text-sm text-white bg-emerald-600 hover:bg-emerald-500 shadow-xl shadow-emerald-600/30 transition">
-                                    <i class="ti ti-terminal-2 text-lg"></i> Manage in Server Console
-                                </a>
+                    @if($order->isRenewal())
+                        {{-- STATE: renewal complete --}}
+                        <div class="p-8 rounded-2xl bg-gray-900 border border-gray-800 text-center space-y-4">
+                            <div class="w-16 h-16 rounded-full bg-emerald-950 border border-emerald-800 text-emerald-400 flex items-center justify-center text-3xl mx-auto">
+                                <i class="ti ti-rosette-discount-check"></i>
                             </div>
-                        @endif
-                    </div>
-                @endif
+                            <h2 class="text-2xl font-bold text-white">Renewal Applied!</h2>
+                            <p class="text-sm text-gray-300 max-w-md mx-auto">
+                                Your payment was verified and your server subscription has been extended.
+                            </p>
+                            @if($renewsOrder && $renewsOrder->server)
+                                <div class="pt-4">
+                                    <a href="/server/{{ $renewsOrder->server->uuid_short }}" class="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl font-bold text-sm text-white bg-emerald-600 hover:bg-emerald-500 shadow-xl shadow-emerald-600/30 transition">
+                                        <i class="ti ti-terminal-2 text-lg"></i> Manage in Server Console
+                                    </a>
+                                </div>
+                            @endif
+                        </div>
+                    @else
+                        <!-- Active or Completed State -->
+                        <div class="p-8 rounded-2xl bg-gray-900 border border-gray-800 text-center space-y-4">
+                            <div class="w-16 h-16 rounded-full bg-emerald-950 border border-emerald-800 text-emerald-400 flex items-center justify-center text-3xl mx-auto">
+                                <i class="ti ti-check"></i>
+                            </div>
+                            <h2 class="text-2xl font-bold text-white">Your Server Is Ready!</h2>
+                            <p class="text-sm text-gray-300 max-w-md mx-auto">
+                                Payment was verified and your container has been allocated and started on our server infrastructure.
+                            </p>
+                            @if($order->server)
+                                <div class="pt-4">
+                                    <a href="/server/{{ $order->server->uuid_short }}" class="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl font-bold text-sm text-white bg-emerald-600 hover:bg-emerald-500 shadow-xl shadow-emerald-600/30 transition">
+                                        <i class="ti ti-terminal-2 text-lg"></i> Manage in Server Console
+                                    </a>
+                                </div>
+                            @endif
+                        </div>
+                    @endif
 
                 <!-- Payment Submissions History -->
                 @if($order->paymentSubmissions->count() > 0)

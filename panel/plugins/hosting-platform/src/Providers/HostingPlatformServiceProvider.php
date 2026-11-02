@@ -6,6 +6,7 @@ use App\Enums\RolePermissionPrefixes;
 use App\Models\Role;
 use BrandedHosting\Platform\Console\Commands\CheckStatusMonitorsCommand;
 use BrandedHosting\Platform\Console\Commands\ExpireStaleOrdersCommand;
+use BrandedHosting\Platform\Console\Commands\RunBillingCommand;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\ServiceProvider;
 
@@ -47,12 +48,14 @@ class HostingPlatformServiceProvider extends ServiceProvider
             $this->commands([
                 CheckStatusMonitorsCommand::class,
                 ExpireStaleOrdersCommand::class,
+                RunBillingCommand::class,
             ]);
         }
 
         $this->callAfterResolving(Schedule::class, function (Schedule $schedule) {
             $schedule->command('hosting:check-monitors')->everyMinute()->withoutOverlapping(2);
             $schedule->command('hosting:expire-orders')->hourly()->withoutOverlapping(10);
+            $schedule->command('hosting:run-billing')->hourly()->withoutOverlapping(30);
         });
     }
 }
