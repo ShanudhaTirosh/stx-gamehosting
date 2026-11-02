@@ -23,6 +23,4 @@ This monorepo unifies the following sub-repositories into a single codebase:
 - **Description**: Pelican container runtime node daemon in Golang.
 
 ## 4. Status Page
-- **Description**: Next.js 15 Uptime Monitoring application with SQLite telemetry history, incident tracking, and Asia/Colombo timezones.
-- **Location**: `status-page/`
-
+- **Description**: Built into the `hosting-platform` plugin (`/status`, monitors and incidents managed in the admin panel). The separate Next.js `status-page/` app referenced in earlier versions is not part of this repository.

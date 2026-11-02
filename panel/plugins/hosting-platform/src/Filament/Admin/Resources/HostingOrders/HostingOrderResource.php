@@ -2,7 +2,6 @@
 
 namespace BrandedHosting\Platform\Filament\Admin\Resources\HostingOrders;
 
-use App\Services\Servers\ServerCreationService;
 use BrandedHosting\Platform\Enums\OrderStatus;
 use BrandedHosting\Platform\Enums\VerificationStatus;
 use BrandedHosting\Platform\Filament\Admin\Resources\HostingOrders\Pages\ListHostingOrders;
@@ -18,7 +17,6 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Support\HtmlString;
-use Throwable;
 
 class HostingOrderResource extends Resource
 {
@@ -102,38 +100,22 @@ class HostingOrderResource extends Resource
                     ->modalHeading(fn (HostingOrder $order) => "Approve & Deploy Server for Order #{$order->order_number}?")
                     ->modalDescription('This will verify the payment and immediately allocate a container, assign ports, and activate the customer game server.')
                     ->action(function (HostingOrder $order) {
-                        $order->update([
-                            'status' => OrderStatus::Approved,
-                            'approved_at' => now(),
-                        ]);
+                        $queued = $order->approveAndQueueProvisioning(
+                            auth()->id(),
+                            'Approved and queued for deployment by administrator.'
+                        );
 
-                        if ($submission = $order->latestSubmission) {
-                            $submission->update([
-                                'verification_status' => VerificationStatus::Approved,
-                                'verified_by_user_id' => auth()->id(),
-                                'verified_at' => now(),
-                                'staff_decision_notes' => 'Instant approval & automated deployment initiated by administrator.',
-                            ]);
-                        }
-
-                        try {
-                            $job = new ProvisionPaidServerJob($order->id);
-                            $job->handle(app(ServerCreationService::class));
-
-                            Notification::make()
-                                ->title('Server Deployed & Active!')
-                                ->body("Order #{$order->order_number} has been verified and provisioned successfully.")
+                        $queued
+                            ? Notification::make()
+                                ->title('Approved. Deployment queued')
+                                ->body("Order #{$order->order_number} is being provisioned.")
                                 ->success()
-                                ->send();
-                        } catch (Throwable $e) {
-                            dispatch(new ProvisionPaidServerJob($order->id));
-
-                            Notification::make()
-                                ->title('Provisioning Dispatched')
-                                ->body("Deployment queued for Order #{$order->order_number}: " . $e->getMessage())
+                                ->send()
+                            : Notification::make()
+                                ->title('Order cannot be approved')
+                                ->body("Order #{$order->order_number} is no longer awaiting approval.")
                                 ->warning()
                                 ->send();
-                        }
                     }),
 
                 // 2. Direct Link to Server Console
@@ -235,38 +217,22 @@ class HostingOrderResource extends Resource
                             }),
                     ])
                     ->action(function (HostingOrder $order, array $data) {
-                        $order->update([
-                            'status' => OrderStatus::Approved,
-                            'approved_at' => now(),
-                        ]);
+                        $queued = $order->approveAndQueueProvisioning(
+                            auth()->id(),
+                            $data['staff_notes'] ?? 'Verified and approved.'
+                        );
 
-                        if ($submission = $order->latestSubmission) {
-                            $submission->update([
-                                'verification_status' => VerificationStatus::Approved,
-                                'verified_by_user_id' => auth()->id(),
-                                'verified_at' => now(),
-                                'staff_decision_notes' => $data['staff_notes'] ?? 'Verified and approved.',
-                            ]);
-                        }
-
-                        try {
-                            $job = new ProvisionPaidServerJob($order->id);
-                            $job->handle(app(ServerCreationService::class));
-
-                            Notification::make()
-                                ->title('Payment Approved & Provisioned!')
-                                ->body("Order #{$order->order_number} approved and server container is now active.")
+                        $queued
+                            ? Notification::make()
+                                ->title('Payment approved. Deployment queued')
+                                ->body("Order #{$order->order_number} approved and provisioning has started.")
                                 ->success()
+                                ->send()
+                            : Notification::make()
+                                ->title('Order cannot be approved')
+                                ->body("Order #{$order->order_number} is no longer awaiting approval.")
+                                ->warning()
                                 ->send();
-                        } catch (Throwable $e) {
-                            dispatch(new ProvisionPaidServerJob($order->id));
-
-                            Notification::make()
-                                ->title('Payment Approved!')
-                                ->body("Order #{$order->order_number} approved. Provisioning job dispatched.")
-                                ->success()
-                                ->send();
-                        }
                     }),
 
                 // 5. Retry Deploy Action
@@ -277,24 +243,13 @@ class HostingOrderResource extends Resource
                     ->visible(fn (HostingOrder $order) => $order->status === OrderStatus::Approved || ($order->provisioningRecord?->status === \BrandedHosting\Platform\Enums\ProvisioningStatus::Failed))
                     ->requiresConfirmation()
                     ->action(function (HostingOrder $order) {
-                        try {
-                            $job = new ProvisionPaidServerJob($order->id);
-                            $job->handle(app(ServerCreationService::class));
+                        ProvisionPaidServerJob::dispatch($order->id);
 
-                            Notification::make()
-                                ->title('Server Deployed!')
-                                ->body("Order #{$order->order_number} provisioned successfully.")
-                                ->success()
-                                ->send();
-                        } catch (Throwable $e) {
-                            dispatch(new ProvisionPaidServerJob($order->id));
-
-                            Notification::make()
-                                ->title('Provisioning Retried')
-                                ->body("Dispatched provisioning job for Order #{$order->order_number}.")
-                                ->info()
-                                ->send();
-                        }
+                        Notification::make()
+                            ->title('Deployment queued')
+                            ->body("Provisioning for order #{$order->order_number} has been queued again.")
+                            ->info()
+                            ->send();
                     }),
             ]);
     }

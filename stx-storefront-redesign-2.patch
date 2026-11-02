@@ -1,0 +1,1804 @@
+From ceb0ced78f023f45c0ca3badcb7641200fa0fe87 Mon Sep 17 00:00:00 2001
+From: STX Hardening <noreply@example.com>
+Date: Mon, 2 Nov 2026 00:42:16 +0000
+Subject: [PATCH] Storefront redesign part 2: checkout, order tracking, games,
+ category, about, contact
+
+- Checkout rebuilt; fixes summary that hid the setup fee and under-quoted the total
+- Order tracking rebuilt with explicit state per status (was showing 'Your Server Is Ready!'
+  for cancelled/expired/approved orders) and a progress tracker; payment account numbers now styled
+  (view used an undefined brand-400 colour)
+- Games and category pages share a spec-table partial
+- About and Contact rewritten: removed invented datacenters, hardware, bandwidth/DDoS figures,
+  fake SLA, member counts and placeholder address; use real SEO settings and live monitor data
+- Share $seo via view composer (child views render before the layout)
+- Region picker built from config
+---
+ .../config/hosting-platform.php               |   6 +
+ .../views/storefront/about.blade.php          | 255 +++--------
+ .../views/storefront/category.blade.php       | 139 ++----
+ .../views/storefront/checkout.blade.php       | 250 +++++------
+ .../views/storefront/contact.blade.php        | 320 +++-----------
+ .../views/storefront/games.blade.php          | 149 ++-----
+ .../views/storefront/layout.blade.php         |   9 +
+ .../views/storefront/order_tracking.blade.php | 410 ++++++++----------
+ .../storefront/partials/plan_table.blade.php  |  41 ++
+ .../HostingPlatformServiceProvider.php        |   7 +
+ 10 files changed, 529 insertions(+), 1057 deletions(-)
+ create mode 100644 panel/plugins/hosting-platform/resources/views/storefront/partials/plan_table.blade.php
+
+diff --git a/panel/plugins/hosting-platform/config/hosting-platform.php b/panel/plugins/hosting-platform/config/hosting-platform.php
+index 80038ce..bce9b76 100644
+--- a/panel/plugins/hosting-platform/config/hosting-platform.php
++++ b/panel/plugins/hosting-platform/config/hosting-platform.php
+@@ -33,6 +33,12 @@ return [
+             'de' => ['de'],
+         ],
+ 
++        // Names shown in the checkout region picker (keys must match 'regions' above).
++        'region_labels' => [
++            'sg' => 'Singapore',
++            'de' => 'Frankfurt',
++        ],
++
+         // Port range(s) searched for a free allocation when a product defines no ports.
+         'default_ports' => array_filter(explode(',', (string) env('HOSTING_DEFAULT_PORTS', '25565-25999'))),
+ 
+diff --git a/panel/plugins/hosting-platform/resources/views/storefront/about.blade.php b/panel/plugins/hosting-platform/resources/views/storefront/about.blade.php
+index 6c79720..21f447c 100644
+--- a/panel/plugins/hosting-platform/resources/views/storefront/about.blade.php
++++ b/panel/plugins/hosting-platform/resources/views/storefront/about.blade.php
+@@ -1,224 +1,73 @@
+ @extends('hosting-platform::storefront.layout')
+ 
+-@section('title', 'About Us — STX Enterprises | Next-Gen Cloud & Game Infrastructure')
+-@section('meta_description', 'Learn about STX Enterprises: high-performance game servers, sub-15ms Sri Lanka network routing, Colombo DC & Singapore Equinix nodes, and our enterprise SLA commitment.')
++@section('title', 'About ' . ($seo->site_name ?: 'STX Enterprises'))
++@section('meta_description', 'Game servers billed in Sri Lankan rupees, paid by bank transfer, eZ Cash or HelaPay, with live uptime numbers measured by our own checks.')
+ 
+ @section('content')
+-<!-- Hero Section -->
+-<section class="relative pt-24 pb-20 overflow-hidden">
+-    <!-- Ambient Glows -->
+-    <div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-gradient-to-tr from-indigo-600/20 via-purple-600/15 to-transparent rounded-full blur-3xl pointer-events-none"></div>
+-
+-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+-        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold text-indigo-300 bg-indigo-500/10 border border-indigo-500/25 mb-6">
+-            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+-            <span>ENTERPRISE CLOUD ARCHITECTURE</span>
++@php
++    $monitored = $monitors->filter(fn ($m) => $m->uptime_percentage !== null);
++    $statusColor = fn ($st) => match ($st) { 'down' => 'var(--bad)', 'degraded' => 'var(--warn)', null, '' => 'var(--line2)', default => 'var(--ok)' };
++@endphp
++<section class="border-b stx-rule">
++    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 lg:py-20 grid lg:grid-cols-12 gap-10">
++        <div class="lg:col-span-7">
++            <div class="stx-label mb-4">About</div>
++            <h1 class="stx-display text-5xl sm:text-7xl text-white">Game hosting<br>for people who<br><span style="color:var(--acc)">pay in rupees.</span></h1>
+         </div>
+-        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-tight">
+-            Engineering Sri Lanka’s <br>
+-            <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-300 to-cyan-300">
+-                Lowest-Latency Cloud & Game Infrastructure
+-            </span>
+-        </h1>
+-        <p class="mt-6 text-base sm:text-lg text-gray-400 max-w-3xl mx-auto leading-relaxed">
+-            STX Enterprises was founded to eliminate lag, exorbitant foreign-currency charges, and slow support for South Asian gamers and developers. We build high-frequency bare-metal compute nodes with direct peering across Dialog, SLT-Mobitel, Airtel, and Hutch.
+-        </p>
+-
+-        <div class="mt-10 flex flex-wrap items-center justify-center gap-4">
+-            <a href="{{ route('hosting.storefront.games') }}" class="px-8 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 transition shadow-xl shadow-indigo-600/25 flex items-center gap-2">
+-                <i class="ti ti-server-2 text-lg"></i>
+-                <span>Explore Game Servers</span>
+-            </a>
+-            <a href="{{ route('hosting.status.index') }}" class="px-8 py-3.5 rounded-xl text-sm font-bold text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 transition flex items-center gap-2">
+-                <i class="ti ti-activity-heartbeat text-lg text-emerald-400"></i>
+-                <span>Live Cluster Status</span>
+-            </a>
++        <div class="lg:col-span-5 lg:pt-10 space-y-4 text-lg text-[var(--mut)] leading-relaxed">
++            <p>{{ $seo->company_legal_name ?: 'STX Enterprises' }} sells game servers that you can pay for with the tools you already use in Sri Lanka: bank transfer, Dialog eZ Cash and Helakuru HelaPay. No international card needed.</p>
++            <p>Every order is checked by a person before a server is deployed, so there is a human on the other end if something goes wrong.</p>
+         </div>
+     </div>
+ </section>
+ 
+-<!-- Core Value Metrics -->
+-<section class="py-12 border-y border-white/5 bg-white/[0.01]">
+-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+-        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+-            <div class="p-6 rounded-2xl bg-white/[0.02] border border-white/5">
+-                <div class="text-3xl sm:text-4xl font-black text-white font-mono">&lt; 8 ms</div>
+-                <div class="text-xs font-semibold uppercase tracking-wider text-indigo-400 mt-1">Nationwide SL Latency</div>
+-                <p class="text-[11px] text-gray-400 mt-1">Direct Colombo BGP IX peering</p>
+-            </div>
+-            <div class="p-6 rounded-2xl bg-white/[0.02] border border-white/5">
+-                <div class="text-3xl sm:text-4xl font-black text-white font-mono">5.7 GHz</div>
+-                <div class="text-xs font-semibold uppercase tracking-wider text-purple-400 mt-1">AMD Ryzen 9 7950X</div>
+-                <p class="text-[11px] text-gray-400 mt-1">Single-thread peak boost clocks</p>
+-            </div>
+-            <div class="p-6 rounded-2xl bg-white/[0.02] border border-white/5">
+-                <div class="text-3xl sm:text-4xl font-black text-white font-mono">99.98%</div>
+-                <div class="text-xs font-semibold uppercase tracking-wider text-emerald-400 mt-1">Verified SLA Uptime</div>
+-                <p class="text-[11px] text-gray-400 mt-1">Redundant upstream power & transit</p>
+-            </div>
+-            <div class="p-6 rounded-2xl bg-white/[0.02] border border-white/5">
+-                <div class="text-3xl sm:text-4xl font-black text-white font-mono">1.2 Tbps</div>
+-                <div class="text-xs font-semibold uppercase tracking-wider text-cyan-400 mt-1">Anycast DDoS Mitigation</div>
+-                <p class="text-[11px] text-gray-400 mt-1">Always-on Layer 3/4 & 7 filtering</p>
+-            </div>
+-        </div>
+-    </div>
+-</section>
+-
+-<!-- Datacenter Locations -->
+-<section class="py-20">
+-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+-        <div class="text-center max-w-2xl mx-auto mb-14">
+-            <h2 class="text-3xl font-black text-white">Tier-III Global Datacenter Presence</h2>
+-            <p class="text-sm text-gray-400 mt-2">Strategically positioned edge infrastructure engineered for maximum uptime and minimum jitter.</p>
+-        </div>
+-
+-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+-            <!-- Datacenter 1: Colombo -->
+-            <div class="p-8 rounded-3xl bg-surface border border-white/10 relative overflow-hidden group hover:border-indigo-500/40 transition duration-300">
+-                <div class="flex items-center justify-between mb-6">
+-                    <div class="flex items-center gap-3">
+-                        <div class="w-12 h-12 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 text-2xl">
+-                            <i class="ti ti-building-broadcast-tower"></i>
+-                        </div>
+-                        <div>
+-                            <h3 class="text-xl font-bold text-white">Colombo Primary DC</h3>
+-                            <p class="text-xs text-gray-400">Western Province, Sri Lanka</p>
+-                        </div>
+-                    </div>
+-                    <span class="px-3 py-1 rounded-full text-xs font-bold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 flex items-center gap-1.5">
+-                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+-                        Active Core
+-                    </span>
+-                </div>
+-
+-                <p class="text-sm text-gray-300 leading-relaxed">
+-                    Direct local fiber termination with SLT-Mobitel, Dialog Axiata, Airtel Lanka, and Hutch. Provides sub-10ms nationwide ping for Minecraft, FiveM, and gaming clans without going through overseas undersea transit cables.
+-                </p>
+-
+-                <div class="mt-6 pt-6 border-t border-white/10 grid grid-cols-2 gap-4 text-xs">
+-                    <div>
+-                        <span class="text-gray-500 block">Hardware Fleet:</span>
+-                        <strong class="text-white">AMD Ryzen 9 7950X Zen 4</strong>
+-                    </div>
+-                    <div>
+-                        <span class="text-gray-500 block">Storage:</span>
+-                        <strong class="text-white">PCIe 4.0 NVMe RAID-10</strong>
+-                    </div>
+-                    <div>
+-                        <span class="text-gray-500 block">DDoS Shield:</span>
+-                        <strong class="text-white">Corero SmartWall + Voxility</strong>
+-                    </div>
+-                    <div>
+-                        <span class="text-gray-500 block">Power:</span>
+-                        <strong class="text-white">2N UPS + Cummins Generator</strong>
+-                    </div>
++<section class="border-b stx-rule">
++    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 lg:py-16">
++        <h2 class="stx-display text-4xl text-white mb-8">What comes with a server</h2>
++        <div class="grid sm:grid-cols-2 lg:grid-cols-4 border-t border-l stx-rule">
++            @foreach([
++                ['Web console', 'Start, stop and watch your server live from the browser.'],
++                ['File access', 'Manage files in the panel or over SFTP.'],
++                ['Backups', 'Backup slots depend on your plan and are listed on each plan.'],
++                ['Databases', 'Included on plans that list them, created for you at deployment.'],
++            ] as [$t, $d])
++                <div class="p-6 border-r border-b stx-rule">
++                    <div class="text-lg font-semibold text-white">{{ $t }}</div>
++                    <p class="mt-2 text-[15px] text-[var(--mut)] leading-relaxed">{{ $d }}</p>
+                 </div>
+-            </div>
+-
+-            <!-- Datacenter 2: Singapore -->
+-            <div class="p-8 rounded-3xl bg-surface border border-white/10 relative overflow-hidden group hover:border-purple-500/40 transition duration-300">
+-                <div class="flex items-center justify-between mb-6">
+-                    <div class="flex items-center gap-3">
+-                        <div class="w-12 h-12 rounded-2xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400 text-2xl">
+-                            <i class="ti ti-network"></i>
+-                        </div>
+-                        <div>
+-                            <h3 class="text-xl font-bold text-white">Singapore Equinix SG1</h3>
+-                            <p class="text-xs text-gray-400">Jurong, Singapore (APAC)</p>
+-                        </div>
+-                    </div>
+-                    <span class="px-3 py-1 rounded-full text-xs font-bold text-cyan-300 bg-cyan-500/15 border border-cyan-500/30 flex items-center gap-1.5">
+-                        <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+-                        APAC Transit
+-                    </span>
+-                </div>
+-
+-                <p class="text-sm text-gray-300 leading-relaxed">
+-                    Equinix SG1 interconnection hub linking Southeast Asia, India, and Australia. Ideal for international game networks, Discord bots, and cross-border web APIs needing ultra-fast global backbone throughput.
+-                </p>
+-
+-                <div class="mt-6 pt-6 border-t border-white/10 grid grid-cols-2 gap-4 text-xs">
+-                    <div>
+-                        <span class="text-gray-500 block">Hardware Fleet:</span>
+-                        <strong class="text-white">AMD EPYC 9654 Genoa</strong>
+-                    </div>
+-                    <div>
+-                        <span class="text-gray-500 block">Storage:</span>
+-                        <strong class="text-white">Enterprise NVMe U.2 / U.3</strong>
+-                    </div>
+-                    <div>
+-                        <span class="text-gray-500 block">DDoS Shield:</span>
+-                        <strong class="text-white">Arbor Sightline Peak Filtering</strong>
+-                    </div>
+-                    <div>
+-                        <span class="text-gray-500 block">Backbone:</span>
+-                        <strong class="text-white">100 Gbps Redundant Upstream</strong>
+-                    </div>
+-                </div>
+-            </div>
++            @endforeach
+         </div>
+     </div>
+ </section>
+ 
+-<!-- Why Choose STX Enterprises -->
+-<section class="py-20 border-t border-white/5 bg-[#05070B]">
+-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+-        <div class="text-center max-w-2xl mx-auto mb-16">
+-            <h2 class="text-3xl font-black text-white">Why Sri Lankan Gamers & Developers Choose STX</h2>
+-            <p class="text-sm text-gray-400 mt-2">Built by engineers who understand the frustrations of overseas hosts.</p>
+-        </div>
+-
+-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+-            <div class="p-6 rounded-2xl bg-surface border border-white/5 space-y-3">
+-                <div class="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center text-xl">
+-                    <i class="ti ti-coin"></i>
+-                </div>
+-                <h3 class="text-lg font-bold text-white">Direct LKR Currency Pricing</h3>
+-                <p class="text-xs text-gray-400 leading-relaxed">
+-                    Say goodbye to unpredictable foreign exchange markups, 3.5% cross-border credit card transaction fees, and bank card blockages. Pay in fixed Sri Lankan Rupees through Commercial Bank, Sampath Bank, BOC, HNB, eZ Cash, or HelaPay.
+-                </p>
+-            </div>
+-
+-            <div class="p-6 rounded-2xl bg-surface border border-white/5 space-y-3">
+-                <div class="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center text-xl">
+-                    <i class="ti ti-bolt"></i>
+-                </div>
+-                <h3 class="text-lg font-bold text-white">Instant Container Provisioning</h3>
+-                <p class="text-xs text-gray-400 leading-relaxed">
+-                    Our platform automatically allocates Docker containers on isolated Wings daemons. Upon payment verification, your server, dedicated port, and SFTP access are deployed in under 60 seconds without manual ticketing delays.
+-                </p>
+-            </div>
+-
+-            <div class="p-6 rounded-2xl bg-surface border border-white/5 space-y-3">
+-                <div class="w-10 h-10 rounded-xl bg-indigo-500/15 text-indigo-400 flex items-center justify-center text-xl">
+-                    <i class="ti ti-shield-check"></i>
+-                </div>
+-                <h3 class="text-lg font-bold text-white">Automated Daily Backups</h3>
+-                <p class="text-xs text-gray-400 leading-relaxed">
+-                    Every game server includes automated snapshot storage isolated from the host node. Roll back server worlds, plugin configs, or corrupt databases with a single click from the web console.
+-                </p>
++<section class="border-b stx-rule">
++    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 lg:py-16">
++        <h2 class="stx-display text-4xl text-white">Measured, not promised</h2>
++        <p class="mt-3 text-[var(--mut)] max-w-2xl">These numbers come from our own automated checks and update on their own. The full history is on the <a href="{{ route('hosting.status.index') }}" class="text-[var(--acc)] underline underline-offset-2">status page</a>.</p>
++
++        @if($monitored->isNotEmpty())
++            <div class="stx-panel mt-8">
++                @foreach($monitored as $m)
++                    <a href="{{ route('hosting.status.monitor', $m->slug) }}" class="stx-row flex items-center gap-4 px-5 py-4 border-b stx-rule last:border-b-0">
++                        <span class="stx-dot" style="background: {{ $statusColor($m->current_status) }}"></span>
++                        <span class="flex-1 text-white">{{ $m->name }}</span>
++                        <span class="stx-mono text-sm text-[var(--mut)]">{{ $m->current_latency_ms !== null ? round($m->current_latency_ms) . ' ms' : '' }}</span>
++                        <span class="stx-mono text-sm text-white w-20 text-right">{{ number_format($m->uptime_percentage, 2) }}%</span>
++                    </a>
++                @endforeach
+             </div>
+-        </div>
++        @else
++            <div class="stx-panel mt-8 p-6 text-[var(--mut)]">Uptime figures will appear here once monitoring has collected data.</div>
++        @endif
+     </div>
+ </section>
+ 
+-<!-- Call to Action Banner -->
+-<section class="py-20 relative">
+-    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+-        <div class="p-10 sm:p-14 rounded-3xl bg-gradient-to-b from-indigo-950/60 to-surface border border-indigo-500/20 shadow-2xl relative overflow-hidden">
+-            <h2 class="text-3xl sm:text-4xl font-black text-white">Ready for Lag-Free Sri Lankan Gaming?</h2>
+-            <p class="mt-4 text-sm text-gray-300 max-w-xl mx-auto">
+-                Deploy your server today with instant version switcher, Paper/Fabric/Forge support, and 24/7 dedicated local assistance.
+-            </p>
+-            <div class="mt-8 flex items-center justify-center gap-4 flex-wrap">
+-                <a href="{{ route('hosting.storefront.games') }}" class="px-8 py-3.5 rounded-xl font-bold text-sm text-white bg-indigo-600 hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/30">
+-                    Deploy Server Now
+-                </a>
+-                <a href="{{ route('hosting.storefront.contact') }}" class="px-8 py-3.5 rounded-xl font-bold text-sm text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 transition border border-white/10">
+-                    Contact Support
+-                </a>
+-            </div>
++<section>
++    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 lg:py-16 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
++        <h2 class="stx-display text-4xl text-white">Ready when you are.</h2>
++        <div class="flex gap-3">
++            <a href="{{ route('hosting.storefront.games') }}" class="stx-btn">See plans</a>
++            <a href="{{ route('hosting.storefront.contact') }}" class="stx-btn-ghost">Ask a question</a>
+         </div>
+     </div>
+ </section>
+diff --git a/panel/plugins/hosting-platform/resources/views/storefront/category.blade.php b/panel/plugins/hosting-platform/resources/views/storefront/category.blade.php
+index 6fe9e82..824c5ea 100644
+--- a/panel/plugins/hosting-platform/resources/views/storefront/category.blade.php
++++ b/panel/plugins/hosting-platform/resources/views/storefront/category.blade.php
+@@ -39,123 +39,36 @@
+ @endsection
+ 
+ @section('content')
+-<section class="py-16 md:py-24 relative overflow-hidden">
+-    <!-- Ambient Glow Background -->
+-    <div class="absolute -top-32 left-1/2 -translate-x-1/2 w-96 h-96 bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none"></div>
+-
+-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+-        <!-- Breadcrumb & Header -->
+-        <div class="mb-14">
+-            <nav class="flex items-center gap-2 text-xs text-gray-400 mb-4">
+-                <a href="{{ route('hosting.storefront.index') }}" class="hover:text-white transition">Home</a>
+-                <i class="ti ti-chevron-right text-gray-600"></i>
+-                <a href="{{ route('hosting.storefront.games') }}" class="hover:text-white transition">Catalog</a>
+-                <i class="ti ti-chevron-right text-gray-600"></i>
+-                <span class="text-indigo-400 font-semibold">{{ $category->name }}</span>
+-            </nav>
++<section class="border-b stx-rule">
++    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
++        <nav class="stx-label mb-5" aria-label="Breadcrumb">
++            <a href="{{ route('hosting.storefront.games') }}" class="hover:text-white">Servers</a> <span class="mx-1">/</span> <span class="text-white">{{ $category->name }}</span>
++        </nav>
++        <h1 class="stx-display text-5xl sm:text-7xl text-white">{{ $category->name }} hosting</h1>
++        @if($category->description)<p class="mt-5 text-lg text-[var(--mut)] max-w-2xl leading-relaxed">{{ $category->description }}</p>@endif
++    </div>
++</section>
+ 
+-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-8 border-b border-white/10">
+-                <div class="space-y-2">
+-                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/10 border border-indigo-500/20 text-indigo-300">
+-                        <i class="ti {{ $category->icon ?: 'ti-server-2' }}"></i> {{ $category->badge_text ?: 'Active Game Engine' }}
+-                    </div>
+-                    <h1 class="text-3xl sm:text-5xl font-black text-white tracking-tight">{{ $category->name }} Hosting</h1>
+-                    <p class="text-sm text-gray-400 max-w-2xl leading-relaxed">{{ $category->description }}</p>
+-                </div>
+-                <div class="flex items-center gap-3">
+-                    <span class="px-4 py-2 rounded-xl glass-card text-xs font-semibold text-gray-300 border border-white/10 flex items-center gap-2">
+-                        <i class="ti ti-coins text-emerald-400"></i> Local Currency: <strong class="text-white">Sri Lankan Rupees (LKR)</strong>
+-                    </span>
++<section>
++    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16 space-y-14">
++        @forelse($category->products as $product)
++            <div>
++                <div class="mb-5">
++                    <h2 class="text-2xl font-semibold text-white">{{ $product->name }}</h2>
++                    @if($product->description)<p class="mt-1 text-[15px] text-[var(--mut)] max-w-2xl">{{ $product->description }}</p>@endif
+                 </div>
++                @if($product->plans->isNotEmpty())
++                    @include('hosting-platform::storefront.partials.plan_table', ['plans' => $product->plans])
++                @else
++                    <div class="stx-panel p-6 text-[var(--mut)]">No plans are available for {{ $product->name }} right now.</div>
++                @endif
+             </div>
+-        </div>
+-
+-        <!-- Products & Plans Loop -->
+-        @foreach($category->products as $product)
+-            <div class="mb-20">
+-                <div class="flex items-center gap-3 mb-8">
+-                    <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 text-2xl">
+-                        <i class="ti {{ $product->icon ?: 'ti-cube' }}"></i>
+-                    </div>
+-                    <div>
+-                        <h2 class="text-2xl font-bold text-white">{{ $product->name }}</h2>
+-                        <p class="text-xs text-gray-400">{{ $product->description }}</p>
+-                    </div>
+-                </div>
+-
+-                <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+-                    @forelse($product->plans as $plan)
+-                        <div class="glass-card rounded-3xl p-6 flex flex-col justify-between transition duration-300 relative border group overflow-hidden {{ $plan->is_featured ? 'border-indigo-500/60 shadow-xl shadow-indigo-500/15 ring-1 ring-indigo-500/30' : 'border-white/10' }}">
+-                            <!-- Plan Ribbon / Badge -->
+-                            @if($plan->display_badge)
+-<div class="absolute top-4 right-4 z-20">
+-                                <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider {{ $plan->is_featured ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md shadow-indigo-500/30' : 'bg-white/10 text-gray-300 border border-white/10' }}">
+-                                    {{ $plan->display_badge }}
+-                                </span>
+-                            </div>
+-@endif
+-
+-                            <div>
+-                                <!-- Plan Artwork Visual / Banner -->
+-                                <div class="w-full h-36 rounded-2xl overflow-hidden mb-5 bg-black/40 border border-white/5 relative group-hover:border-indigo-500/30 transition">
+-                                    <img src="{{ $plan->display_image }}" alt="{{ $plan->name }}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+-                                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+-                                    <div class="absolute bottom-3 left-3 flex items-center gap-2">
+-                                        <div class="w-7 h-7 rounded-lg bg-indigo-600/80 backdrop-blur-md flex items-center justify-center text-white text-xs">
+-                                            <i class="ti {{ $plan->icon ?: 'ti-server-2' }}"></i>
+-                                        </div>
+-                                        <span class="text-xs font-bold text-white drop-shadow">{{ $plan->name }}</span>
+-                                    </div>
+-                                </div>
+-
+-                                <div class="text-xs text-gray-400 mb-4 line-clamp-2">{{ $plan->tagline }}</div>
+-
+-                                <!-- Price Tag -->
+-                                <div class="mb-5 p-4 rounded-2xl bg-black/50 border border-white/5">
+-                                    <div class="text-3xl font-black font-mono text-white">Rs. {{ number_format((float) $plan->price_lkr, 0) }}</div>
+-                                    <div class="text-[11px] text-gray-400 font-semibold mt-0.5">per {{ $plan->billing_period->getLabel() }} (No hidden setup fees)</div>
+-                                </div>
+-
+-                                <!-- Key Resource Metrics -->
+-                                <div class="grid grid-cols-2 gap-2 mb-5">
+-                                    <div class="p-2.5 rounded-xl bg-white/5 border border-white/5 text-center">
+-                                        <div class="text-[10px] text-gray-400 uppercase font-semibold">RAM</div>
+-                                        <div class="text-sm font-bold text-indigo-300">{{ number_format($plan->memory_mb / 1024, 0) }} GB</div>
+-                                    </div>
+-                                    <div class="p-2.5 rounded-xl bg-white/5 border border-white/5 text-center">
+-                                        <div class="text-[10px] text-gray-400 uppercase font-semibold">NVMe</div>
+-                                        <div class="text-sm font-bold text-emerald-300">{{ number_format($plan->disk_mb / 1024, 0) }} GB</div>
+-                                    </div>
+-                                </div>
+-
+-                                <!-- Feature Bullets Checklist -->
+-                                <div class="border-t border-white/5 pt-4">
+-                                    <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2.5 block">Plan Inclusions:</span>
+-                                    <ul class="space-y-2 text-xs text-gray-300">
+-                                        @foreach($plan->display_features as $feature)
+-                                            <li class="flex items-start gap-2">
+-                                                <i class="ti ti-circle-check text-emerald-400 text-sm shrink-0 mt-0.5"></i>
+-                                                <span class="leading-tight">{{ $feature }}</span>
+-                                            </li>
+-                                        @endforeach
+-                                    </ul>
+-                                </div>
+-                            </div>
+-
+-                            <div class="pt-6 mt-6 border-t border-white/10">
+-                                <a href="{{ route('hosting.checkout.show', $plan->slug) }}" class="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-xs uppercase tracking-wider text-white bg-indigo-600 hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/30 group-hover:scale-[1.02]">
+-                                    Deploy Instance <i class="ti ti-chevron-right"></i>
+-                                </a>
+-                            </div>
+-                        </div>
+-                    @empty
+-                        <div class="col-span-full p-8 text-center glass-card rounded-3xl text-sm text-gray-500">
+-                            No plans configured for this product yet.
+-                        </div>
+-                    @endforelse
+-                </div>
++        @empty
++            <div class="stx-panel p-8">
++                <div class="text-xl font-semibold text-white">Nothing to order here yet.</div>
++                <p class="mt-2 text-[var(--mut)]">We have not published {{ $category->name }} plans. <a href="{{ route('hosting.storefront.contact') }}" class="text-[var(--acc)] underline underline-offset-2">Ask us</a> if you need it.</p>
+             </div>
+-        @endforeach
++        @endforelse
+     </div>
+ </section>
+ @endsection
+diff --git a/panel/plugins/hosting-platform/resources/views/storefront/checkout.blade.php b/panel/plugins/hosting-platform/resources/views/storefront/checkout.blade.php
+index 9051be1..6097d3c 100644
+--- a/panel/plugins/hosting-platform/resources/views/storefront/checkout.blade.php
++++ b/panel/plugins/hosting-platform/resources/views/storefront/checkout.blade.php
+@@ -35,171 +35,123 @@
+ @endsection
+ 
+ @section('content')
+-<section class="py-12 md:py-20 relative overflow-hidden">
+-    <!-- Ambient Glow Background -->
+-    <div class="absolute -top-32 left-1/2 -translate-x-1/2 w-96 h-96 bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none"></div>
+-
+-    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+-        <div class="mb-10 text-center space-y-2">
+-            <h1 class="text-3xl sm:text-4xl font-black text-white">Order Checkout</h1>
+-            <p class="text-sm text-gray-400">Configure your instance and select your preferred payment rail (Bank Transfer / eZ Cash / HelaPay).</p>
+-        </div>
++@php
++    $setupFee = (float) $plan->setup_fee_lkr;
++    $total = (float) $plan->price_lkr + $setupFee;
++    $regionLabels = (array) config('hosting-platform.provisioning.region_labels', []);
++    $fmt = fn ($n) => rtrim(rtrim(number_format($n, 1), '0'), '.');
++@endphp
++<section class="border-b stx-rule">
++    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
++        <div class="stx-label mb-3">Checkout</div>
++        <h1 class="stx-display text-5xl sm:text-6xl text-white">{{ $plan->name }}</h1>
++        <p class="mt-3 text-[var(--mut)]">{{ $plan->product->name }}. You pay after placing the order, not on this page.</p>
++    </div>
++</section>
+ 
++<section>
++    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-14">
+         @if($errors->any())
+-            <div class="mb-8 p-4 rounded-2xl bg-red-950/60 border border-red-500/30 text-red-300 text-sm">
+-                <ul class="list-disc pl-5 space-y-1">
+-                    @foreach($errors->all() as $err)
+-                        <li>{{ $err }}</li>
+-                    @endforeach
++            <div class="mb-8 p-4 border text-sm" style="border-color:var(--bad); background:rgba(255,92,92,.07); color:#FFB4B4" role="alert">
++                <ul class="space-y-1">
++                    @foreach($errors->all() as $err)<li>{{ $err }}</li>@endforeach
+                 </ul>
+             </div>
+         @endif
+ 
+-        <form action="{{ route('hosting.checkout.process', $plan->slug) }}" method="POST">
++        <form action="{{ route('hosting.checkout.process', $plan->slug) }}" method="POST" class="grid lg:grid-cols-12 gap-10 lg:gap-14">
+             @csrf
+-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+-                <!-- Left: Configuration & Details -->
+-                <div class="lg:col-span-2 space-y-8">
+-                    <!-- Server Options -->
+-                    <div class="glass-card p-6 sm:p-8 rounded-3xl">
+-                        <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+-                            <i class="ti ti-server-cog text-indigo-400"></i> Server Details
+-                        </h2>
+-                        
+-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+-                            <div>
+-                                <label class="block text-xs font-semibold text-gray-300 mb-1.5">Server Hostname / Name</label>
+-                                <input type="text" name="server_name" value="{{ old('server_name', $plan->name . ' Server') }}" class="w-full px-4 py-3 rounded-xl bg-black/50 border border-white/10 text-white text-sm focus:border-indigo-500 focus:outline-none" required>
+-                                <span class="text-[10px] text-gray-500">How your instance will be identified in your console.</span>
+-                            </div>
+-
+-                            <div>
+-                                <label class="block text-xs font-semibold text-gray-300 mb-1.5">Hosting Region</label>
+-                                <select name="server_location" class="w-full px-4 py-3 rounded-xl bg-black/50 border border-white/10 text-white text-sm focus:border-indigo-500 focus:outline-none">
+-                                    <option value="sg">Singapore / Asia Pacific (Lowest Latency to Sri Lanka)</option>
+-                                    <option value="de">Frankfurt / Europe</option>
+-                                </select>
+-                            </div>
+-                        </div>
+-                    </div>
+-
+-                    <!-- Account Info if Guest -->
+-                    @guest
+-                    <div class="glass-card p-6 sm:p-8 rounded-3xl">
+-                        <h2 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+-                            <i class="ti ti-user-plus text-indigo-400"></i> Account Creation
+-                        </h2>
+-                        <p class="text-xs text-gray-400 mb-6">Already have an account? <a href="{{ route('filament.app.auth.login') }}" class="text-indigo-400 font-semibold hover:underline">Log in here</a></p>
+ 
+-                        <div class="space-y-4">
+-                            <div>
+-                                <label class="block text-xs font-semibold text-gray-300 mb-1.5">Your Full Name</label>
+-                                <input type="text" name="guest_name" value="{{ old('guest_name') }}" class="w-full px-4 py-3 rounded-xl bg-black/50 border border-white/10 text-white text-sm focus:border-indigo-500 focus:outline-none" placeholder="e.g. Kasun Perera" required>
+-                            </div>
+-
+-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+-                                <div>
+-                                    <label class="block text-xs font-semibold text-gray-300 mb-1.5">Email Address</label>
+-                                    <input type="email" name="guest_email" value="{{ old('guest_email') }}" class="w-full px-4 py-3 rounded-xl bg-black/50 border border-white/10 text-white text-sm focus:border-indigo-500 focus:outline-none" placeholder="you@domain.lk" required>
+-                                </div>
+-                                <div>
+-                                    <label class="block text-xs font-semibold text-gray-300 mb-1.5">Account Password</label>
+-                                    <input type="password" name="guest_password" class="w-full px-4 py-3 rounded-xl bg-black/50 border border-white/10 text-white text-sm focus:border-indigo-500 focus:outline-none" placeholder="Min. 10 characters" required>
+-                                </div>
+-                            </div>
+-                        </div>
++            <div class="lg:col-span-7 space-y-12">
++                {{-- 01 Server --}}
++                <fieldset class="space-y-5">
++                    <legend class="flex items-center gap-3 mb-5"><span class="stx-mono text-sm" style="color:var(--acc)">01</span><span class="text-xl font-semibold text-white">Your server</span></legend>
++                    <div class="stx-field">
++                        <label for="server_name" class="stx-label">Server name</label>
++                        <input id="server_name" type="text" name="server_name" maxlength="60" value="{{ old('server_name', $plan->name . ' Server') }}" class="stx-input">
++                        <p class="stx-hint">Shown in your control panel. You can rename it later.</p>
+                     </div>
+-                    @endguest
+-
+-                    <!-- Payment Method Selection -->
+-                    <div class="glass-card p-6 sm:p-8 rounded-3xl">
+-                        <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+-                            <i class="ti ti-wallet text-indigo-400"></i> Select Payment Method
+-                        </h2>
+-                        
+-                        <div class="space-y-3">
+-                            @foreach($paymentMethods as $method)
+-                                <label class="flex items-start gap-4 p-4 rounded-2xl border border-white/10 bg-black/40 hover:border-indigo-500/50 cursor-pointer transition">
+-                                    <input type="radio" name="payment_method_id" value="{{ $method->id }}" class="mt-1 text-indigo-600 focus:ring-indigo-500" {{ $loop->first ? 'checked' : '' }}>
+-                                    <div class="flex-grow">
+-                                        <div class="flex items-center justify-between">
+-                                            <span class="font-bold text-white text-sm">{{ $method->name }}</span>
+-                                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Manual Slip Verification</span>
+-                                        </div>
+-                                        <p class="text-xs text-gray-400 mt-1">{{ $method->description }}</p>
+-                                    </div>
+-                                </label>
++                    @if(count($regionLabels))
++                    <div class="stx-field">
++                        <label for="server_location" class="stx-label">Region</label>
++                        <select id="server_location" name="server_location" class="stx-input">
++                            @foreach($regionLabels as $code => $label)
++                                <option value="{{ $code }}" @selected(old('server_location', array_key_first($regionLabels)) === $code)>{{ $label }}</option>
+                             @endforeach
+-                        </div>
++                        </select>
+                     </div>
+-                </div>
+-
+-                <!-- Right: Order Summary Sticky Card -->
+-                <div class="space-y-6">
+-                    <div class="glass-card p-6 sm:p-8 rounded-3xl sticky top-28 space-y-6">
+-                        <h2 class="text-lg font-bold text-white border-b border-white/10 pb-4">Order Summary</h2>
+-
+-                        <div>
+-                            <!-- Plan Thumbnail & Ribbon -->
+-                            <div class="relative w-full h-28 rounded-2xl overflow-hidden mb-4 bg-black/40 border border-white/5">
+-                                <img src="{{ $plan->display_image }}" alt="{{ $plan->name }}" class="w-full h-full object-cover">
+-                                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+-                                @if($plan->display_badge)
+-<div class="absolute top-2 right-2">
+-                                    <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-indigo-600/90 text-white shadow">
+-                                        {{ $plan->display_badge }}
+-                                    </span>
+-                                </div>
+-@endif
+-                                <div class="absolute bottom-2 left-3">
+-                                    <span class="text-xs font-bold text-white">{{ $plan->name }}</span>
+-                                </div>
+-                            </div>
+-
+-                            <div class="flex justify-between items-start">
+-                                <div>
+-                                    <div class="font-bold text-white text-base">{{ $plan->name }}</div>
+-                                    <div class="text-xs text-indigo-400 mt-0.5">{{ $plan->product->name }}</div>
+-                                </div>
+-                                <span class="font-mono font-bold text-white">Rs. {{ number_format((float) $plan->price_lkr, 2) }}</span>
+-                            </div>
+-                            
+-                            <div class="mt-4 p-3 rounded-xl bg-black/40 border border-white/5 space-y-1.5 text-xs text-gray-400">
+-                                <div class="flex justify-between"><span>RAM:</span> <strong class="text-white">{{ number_format($plan->memory_mb / 1024, 0) }} GB</strong></div>
+-                                <div class="flex justify-between"><span>CPU:</span> <strong class="text-white">{{ $plan->cpu_percent }}%</strong></div>
+-                                <div class="flex justify-between"><span>NVMe Disk:</span> <strong class="text-white">{{ number_format($plan->disk_mb / 1024, 0) }} GB</strong></div>
+-                            </div>
+-                        </div>
+-
+-                        <div class="border-t border-white/10 pt-4 space-y-2 text-xs">
+-                            <div class="flex justify-between text-gray-400">
+-                                <span>Cycle:</span>
+-                                <span class="font-semibold text-white capitalize">{{ $plan->billing_period->getLabel() }}</span>
+-                            </div>
+-                            <div class="flex justify-between text-gray-400">
+-                                <span>Setup Fee:</span>
+-                                <span class="font-semibold text-emerald-400">FREE (Rs. 0.00)</span>
+-                            </div>
++                    @endif
++                </fieldset>
++
++                {{-- 02 Account --}}
++                @guest
++                <fieldset class="space-y-5">
++                    <legend class="flex items-center gap-3 mb-2"><span class="stx-mono text-sm" style="color:var(--acc)">02</span><span class="text-xl font-semibold text-white">Your account</span></legend>
++                    <p class="text-[15px] text-[var(--mut)]">Already registered? <a href="{{ route('filament.app.auth.login') }}" class="text-[var(--acc)] underline underline-offset-2">Sign in first</a>, then come back.</p>
++                    <div class="stx-field">
++                        <label for="guest_name" class="stx-label">Full name</label>
++                        <input id="guest_name" type="text" name="guest_name" autocomplete="name" value="{{ old('guest_name') }}" class="stx-input" required>
++                    </div>
++                    <div class="grid sm:grid-cols-2 gap-5">
++                        <div class="stx-field">
++                            <label for="guest_email" class="stx-label">Email</label>
++                            <input id="guest_email" type="email" name="guest_email" autocomplete="email" value="{{ old('guest_email') }}" class="stx-input" required>
+                         </div>
+-
+-                        <div class="border-t border-white/10 pt-4 flex justify-between items-baseline">
+-                            <span class="text-sm font-bold text-white">Total Due:</span>
+-                            <div class="text-right">
+-                                <span class="text-2xl font-black font-mono text-indigo-400">Rs. {{ number_format((float) $plan->price_lkr, 2) }}</span>
+-                                <span class="text-[10px] text-gray-400 block font-semibold">LKR (Sri Lankan Rupee)</span>
+-                            </div>
++                        <div class="stx-field">
++                            <label for="guest_password" class="stx-label">Password</label>
++                            <input id="guest_password" type="password" name="guest_password" autocomplete="new-password" minlength="10" class="stx-input" required>
++                            <p class="stx-hint">At least 10 characters.</p>
+                         </div>
++                    </div>
++                </fieldset>
++                @endguest
++
++                {{-- 03 Payment --}}
++                <fieldset class="space-y-4">
++                    <legend class="flex items-center gap-3 mb-2"><span class="stx-mono text-sm" style="color:var(--acc)">{{ auth()->check() ? '02' : '03' }}</span><span class="text-xl font-semibold text-white">How you will pay</span></legend>
++                    <p class="text-[15px] text-[var(--mut)]">Pick a method. The account or wallet details appear on your order page right after you place the order.</p>
++                    @forelse($paymentMethods as $method)
++                        <label class="stx-choice">
++                            <input type="radio" name="payment_method_id" value="{{ $method->id }}" @checked(old('payment_method_id', $paymentMethods->first()->id) == $method->id) required>
++                            <span>
++                                <span class="block font-semibold text-white">{{ $method->name }}</span>
++                                @if($method->description)<span class="block text-sm text-[var(--mut)] mt-0.5">{{ $method->description }}</span>@endif
++                            </span>
++                        </label>
++                    @empty
++                        <div class="p-4 border text-sm" style="border-color:var(--warn); color:#FFD28A">No payment methods are available right now. Please contact us to place an order.</div>
++                    @endforelse
++                </fieldset>
++            </div>
+ 
+-                        <button type="submit" class="w-full py-4 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 transition shadow-xl shadow-indigo-600/30 flex items-center justify-center gap-2">
+-                            <i class="ti ti-lock"></i> Place Order & Continue
+-                        </button>
+-
+-                        <div class="text-center text-[10px] text-gray-500">
+-                            By placing this order you agree to the STX Enterprises Terms of Service.
+-                        </div>
++            {{-- Summary --}}
++            <aside class="lg:col-span-5">
++                <div class="stx-panel lg:sticky lg:top-24">
++                    <div class="px-5 py-4 border-b stx-rule flex items-center justify-between">
++                        <span class="stx-label">Order summary</span>
++                        <span class="text-sm text-[var(--mut)]">{{ $plan->product->name }}</span>
++                    </div>
++                    <dl class="px-5 py-4 space-y-2.5 text-[15px]">
++                        <div class="flex justify-between"><dt class="text-[var(--mut)]">RAM</dt><dd class="stx-mono text-white">{{ $fmt($plan->memory_gb) }} GB</dd></div>
++                        <div class="flex justify-between"><dt class="text-[var(--mut)]">CPU</dt><dd class="stx-mono text-white">{{ $plan->cpu_percent }}%</dd></div>
++                        <div class="flex justify-between"><dt class="text-[var(--mut)]">Disk</dt><dd class="stx-mono text-white">{{ $fmt($plan->disk_gb) }} GB</dd></div>
++                        @if($plan->database_limit > 0)<div class="flex justify-between"><dt class="text-[var(--mut)]">Databases</dt><dd class="stx-mono text-white">{{ $plan->database_limit }}</dd></div>@endif
++                        @if($plan->backup_limit > 0)<div class="flex justify-between"><dt class="text-[var(--mut)]">Backup slots</dt><dd class="stx-mono text-white">{{ $plan->backup_limit }}</dd></div>@endif
++                    </dl>
++                    <dl class="px-5 py-4 border-t stx-rule space-y-2.5 text-[15px]">
++                        <div class="flex justify-between"><dt class="text-[var(--mut)]">{{ $plan->name }} / {{ strtolower($plan->billing_period->getLabel()) }}</dt><dd class="stx-mono text-white">Rs. {{ number_format((float) $plan->price_lkr, 2) }}</dd></div>
++                        @if($setupFee > 0)<div class="flex justify-between"><dt class="text-[var(--mut)]">Setup fee</dt><dd class="stx-mono text-white">Rs. {{ number_format($setupFee, 2) }}</dd></div>@endif
++                    </dl>
++                    <div class="px-5 py-5 border-t stx-rule flex items-baseline justify-between">
++                        <span class="text-white font-semibold">Total due</span>
++                        <span class="stx-mono text-2xl" style="color:var(--acc)">Rs. {{ number_format($total, 2) }}</span>
++                    </div>
++                    <div class="px-5 pb-5">
++                        <button type="submit" class="stx-btn w-full justify-center" @disabled($paymentMethods->isEmpty())>Place order <i class="ti ti-arrow-right"></i></button>
++                        <p class="stx-hint mt-3">Nothing is charged now. Your server is deployed after we verify your payment slip. By ordering you accept the <a href="{{ route('hosting.storefront.terms') }}" class="underline">Terms</a>.</p>
+                     </div>
+                 </div>
+-            </div>
++            </aside>
+         </form>
+     </div>
+ </section>
+diff --git a/panel/plugins/hosting-platform/resources/views/storefront/contact.blade.php b/panel/plugins/hosting-platform/resources/views/storefront/contact.blade.php
+index 08e84d1..b1f606a 100644
+--- a/panel/plugins/hosting-platform/resources/views/storefront/contact.blade.php
++++ b/panel/plugins/hosting-platform/resources/views/storefront/contact.blade.php
+@@ -1,272 +1,88 @@
+ @extends('hosting-platform::storefront.layout')
+ 
+-@section('title', 'Contact Us & NOC Helpdesk — STX Enterprises')
+-@section('meta_description', 'Contact STX Enterprises 24/7 technical support and NOC helpdesk in Colombo. Get in touch via Discord, WhatsApp, or direct inquiry ticketing.')
++@section('title', 'Contact ' . ($seo->site_name ?: 'STX Enterprises'))
++@section('meta_description', 'Contact us about plans, payment slips or technical problems with your server.')
+ 
+ @section('content')
+-<!-- Hero Section -->
+-<section class="relative pt-24 pb-16 overflow-hidden">
+-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+-        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold text-indigo-300 bg-indigo-500/10 border border-indigo-500/25 mb-6">
+-            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+-            <span>24/7/365 NOC HELPDESK & SUPPORT</span>
+-        </div>
+-        <h1 class="text-4xl sm:text-5xl font-black text-white tracking-tight">
+-            We’re Here to Help. <br>
+-            <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-300">
+-                Get in Touch with Our Colombo NOC Team.
+-            </span>
+-        </h1>
+-        <p class="mt-4 text-base text-gray-400 max-w-2xl mx-auto">
+-            Have questions about server plans, custom BGP routing, payment slip verification, or technical plugin setup? Our local engineering team is on standby 24/7.
+-        </p>
++@php
++    $channels = array_values(array_filter([
++        $seo->contact_email ? ['Email', $seo->contact_email, 'mailto:' . $seo->contact_email] : null,
++        $seo->support_discord_url ? ['Discord', 'Join our server', $seo->support_discord_url] : null,
++        $seo->support_whatsapp_url ? ['WhatsApp', 'Message us', $seo->support_whatsapp_url] : null,
++        $seo->contact_phone ? ['Phone', $seo->contact_phone, 'tel:' . preg_replace('/[^\d+]/', '', $seo->contact_phone)] : null,
++    ]));
++@endphp
++<section class="border-b stx-rule">
++    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
++        <div class="stx-label mb-4">Contact</div>
++        <h1 class="stx-display text-5xl sm:text-7xl text-white">Talk to a person.</h1>
++        <p class="mt-5 text-lg text-[var(--mut)] max-w-xl">Questions about plans, payment slips or a server that is not behaving. Include your order number if you have one.</p>
+     </div>
+ </section>
+ 
+-<!-- Content Grid: Form + Info Channels -->
+-<section class="pb-24">
+-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-12">
+-            <!-- Left Column: Interactive Contact Form (7 cols) -->
+-            <div class="lg:col-span-7">
+-                <div class="p-8 sm:p-10 rounded-3xl bg-surface border border-white/10 shadow-2xl relative">
+-                    <h2 class="text-2xl font-bold text-white mb-1">Send a Dispatch Request</h2>
+-                    <p class="text-xs text-gray-400 mb-8">Fill out the form below. We dispatch inquiries directly to the on-call engineer.</p>
+-
+-                    @if(session('contact_success'))
+-                        <div class="mb-8 p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-sm flex items-start gap-3">
+-                            <i class="ti ti-circle-check text-xl mt-0.5 shrink-0 text-emerald-400"></i>
+-                            <div>
+-                                <strong class="block font-bold">Dispatch Message Sent!</strong>
+-                                <span class="text-xs leading-relaxed text-emerald-200">{{ session('contact_success') }}</span>
+-                            </div>
+-                        </div>
+-                    @endif
+-
+-                    @if($errors->any())
+-                        <div class="mb-8 p-4 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-sm">
+-                            <strong class="block font-bold mb-1">Please correct the following errors:</strong>
+-                            <ul class="list-disc pl-5 text-xs space-y-1 text-rose-200">
+-                                @foreach($errors->all() as $error)
+-                                    <li>{{ $error }}</li>
+-                                @endforeach
+-                            </ul>
+-                        </div>
+-                    @endif
+-
+-                    <form action="{{ route('hosting.storefront.contact.submit') }}" method="POST" class="space-y-6">
+-                        @csrf
+-
+-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+-                            <!-- Name -->
+-                            <div>
+-                                <label for="name" class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-2">
+-                                    Your Full Name <span class="text-rose-400">*</span>
+-                                </label>
+-                                <input
+-                                    type="text"
+-                                    name="name"
+-                                    id="name"
+-                                    required
+-                                    value="{{ old('name', auth()->user()?->name) }}"
+-                                    placeholder="Kasun Perera"
+-                                    class="w-full px-4 py-3 rounded-xl bg-obsidian border border-white/10 text-white text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition"
+-                                >
+-                            </div>
+-
+-                            <!-- Email -->
+-                            <div>
+-                                <label for="email" class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-2">
+-                                    Email Address <span class="text-rose-400">*</span>
+-                                </label>
+-                                <input
+-                                    type="email"
+-                                    name="email"
+-                                    id="email"
+-                                    required
+-                                    value="{{ old('email', auth()->user()?->email) }}"
+-                                    placeholder="kasun@example.com"
+-                                    class="w-full px-4 py-3 rounded-xl bg-obsidian border border-white/10 text-white text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition"
+-                                >
+-                            </div>
+-                        </div>
+-
+-                        <!-- Department Selection -->
+-                        <div>
+-                            <label for="department" class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-2">
+-                                Target Department <span class="text-rose-400">*</span>
+-                            </label>
+-                            <select
+-                                name="department"
+-                                id="department"
+-                                required
+-                                class="w-full px-4 py-3 rounded-xl bg-obsidian border border-white/10 text-white text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition"
+-                            >
+-                                <option value="technical" {{ old('department') == 'technical' ? 'selected' : '' }}>Technical Support & Server Configuration</option>
+-                                <option value="billing" {{ old('department') == 'billing' ? 'selected' : '' }}>Billing, Invoicing & Bank Slips</option>
+-                                <option value="sales" {{ old('department') == 'sales' ? 'selected' : '' }}>Sales & Custom Enterprise Quotes</option>
+-                                <option value="abuse" {{ old('department') == 'abuse' ? 'selected' : '' }}>Network Security, DDoS & Abuse Report</option>
+-                            </select>
+-                        </div>
+-
+-                        <!-- Subject -->
+-                        <div>
+-                            <label for="subject" class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-2">
+-                                Subject <span class="text-rose-400">*</span>
+-                            </label>
+-                            <input
+-                                type="text"
+-                                name="subject"
+-                                id="subject"
+-                                required
+-                                value="{{ old('subject') }}"
+-                                placeholder="e.g. Inquiry regarding 8GB Paper Minecraft custom plugins"
+-                                class="w-full px-4 py-3 rounded-xl bg-obsidian border border-white/10 text-white text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition"
+-                            >
+-                        </div>
+-
+-                        <!-- Message -->
+-                        <div>
+-                            <label for="message" class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-2">
+-                                Detailed Message <span class="text-rose-400">*</span>
+-                            </label>
+-                            <textarea
+-                                name="message"
+-                                id="message"
+-                                rows="5"
+-                                required
+-                                placeholder="Describe your question, server requirements, or issue in detail..."
+-                                class="w-full px-4 py-3 rounded-xl bg-obsidian border border-white/10 text-white text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition leading-relaxed"
+-                            >{{ old('message') }}</textarea>
+-                        </div>
+-
+-                        <button
+-                            type="submit"
+-                            class="w-full py-4 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 transition shadow-xl shadow-indigo-600/30 flex items-center justify-center gap-2"
+-                        >
+-                            <i class="ti ti-send text-base"></i>
+-                            <span>Transmit Dispatch Ticket</span>
+-                        </button>
+-                    </form>
++<section>
++    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16 grid lg:grid-cols-12 gap-12">
++        <div class="lg:col-span-7">
++            @if(session('contact_success'))
++                <div class="mb-6 p-4 border text-sm" style="border-color:var(--ok); background:rgba(61,220,132,.07); color:#B6F2D0" role="status">{{ session('contact_success') }}</div>
++            @endif
++            @if($errors->any())
++                <div class="mb-6 p-4 border text-sm" style="border-color:var(--bad); background:rgba(255,92,92,.07); color:#FFB4B4" role="alert">
++                    <ul class="space-y-1">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>
+                 </div>
+-            </div>
+-
+-            <!-- Right Column: Direct Channels & Hotline (5 cols) -->
+-            <div class="lg:col-span-5 space-y-6">
+-                <!-- Direct Support Channels -->
+-                <div class="p-8 rounded-3xl bg-surface border border-white/10 space-y-6">
+-                    <h3 class="text-xl font-bold text-white">Direct Communication Hub</h3>
+-                    <p class="text-xs text-gray-400 leading-relaxed">Prefer real-time chat or immediate voice contact? Connect with our engineers directly.</p>
+-
+-                    <!-- Channel 1: Email -->
+-                    <div class="flex items-start gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+-                        <div class="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xl shrink-0">
+-                            <i class="ti ti-mail"></i>
+-                        </div>
+-                        <div class="min-w-0">
+-                            <div class="text-xs text-gray-400">Official Invoicing & Desk</div>
+-                            <a href="mailto:billing@stxenterprises.lk" class="text-sm font-bold text-white hover:text-indigo-400 transition font-mono truncate block">
+-                                billing@stxenterprises.lk
+-                            </a>
+-                            <div class="text-[11px] text-gray-500 mt-0.5">Average reply time: ~15 mins</div>
+-                        </div>
++            @endif
++
++            <form action="{{ route('hosting.storefront.contact.submit') }}" method="POST" class="space-y-5">
++                @csrf
++                <div class="grid sm:grid-cols-2 gap-5">
++                    <div class="stx-field">
++                        <label for="name" class="stx-label">Name</label>
++                        <input id="name" type="text" name="name" maxlength="100" autocomplete="name" value="{{ old('name', auth()->user()?->username) }}" class="stx-input" required>
+                     </div>
+-
+-                    <!-- Channel 2: Discord -->
+-                    <div class="flex items-start gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+-                        <div class="w-10 h-10 rounded-xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center text-xl shrink-0">
+-                            <i class="ti ti-brand-discord"></i>
+-                        </div>
+-                        <div class="min-w-0">
+-                            <div class="text-xs text-gray-400">Gamer Community & Live Bot Support</div>
+-                            <a href="https://discord.gg" target="_blank" class="text-sm font-bold text-white hover:text-indigo-400 transition flex items-center gap-1.5 mt-0.5">
+-                                <span>STX Gaming Discord</span>
+-                                <i class="ti ti-external-link text-xs"></i>
+-                            </a>
+-                            <div class="text-[11px] text-emerald-400 mt-0.5">● 1,500+ Sri Lankan Members Online</div>
+-                        </div>
++                    <div class="stx-field">
++                        <label for="email" class="stx-label">Email</label>
++                        <input id="email" type="email" name="email" maxlength="150" autocomplete="email" value="{{ old('email', auth()->user()?->email) }}" class="stx-input" required>
+                     </div>
+-
+-                    <!-- Channel 3: Phone / WhatsApp -->
+-                    <div class="flex items-start gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+-                        <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl shrink-0">
+-                            <i class="ti ti-phone-call"></i>
+-                        </div>
+-                        <div class="min-w-0">
+-                            <div class="text-xs text-gray-400">Sri Lanka Operations Hotline</div>
+-                            <div class="text-sm font-bold text-white font-mono mt-0.5">+94 11 234 5678</div>
+-                            <div class="text-[11px] text-gray-500 mt-0.5">Monday – Sunday (24/7 Priority Emergency)</div>
+-                        </div>
++                </div>
++                <div class="grid sm:grid-cols-2 gap-5">
++                    <div class="stx-field">
++                        <label for="department" class="stx-label">Topic</label>
++                        <select id="department" name="department" class="stx-input">
++                            @foreach(['technical' => 'Technical help', 'billing' => 'Billing and payment slips', 'sales' => 'Sales and plans', 'abuse' => 'Report abuse'] as $v => $l)
++                                <option value="{{ $v }}" @selected(old('department', 'technical') === $v)>{{ $l }}</option>
++                            @endforeach
++                        </select>
+                     </div>
+-
+-                    <!-- Channel 4: Address -->
+-                    <div class="flex items-start gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+-                        <div class="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center text-xl shrink-0">
+-                            <i class="ti ti-map-pin"></i>
+-                        </div>
+-                        <div class="min-w-0">
+-                            <div class="text-xs text-gray-400">Headquarters</div>
+-                            <div class="text-sm font-bold text-white mt-0.5">STX Enterprises Lanka (Pvt) Ltd</div>
+-                            <div class="text-[11px] text-gray-400 mt-0.5">Galle Road, Colombo 03, Western Province, Sri Lanka</div>
+-                        </div>
++                    <div class="stx-field">
++                        <label for="subject" class="stx-label">Subject</label>
++                        <input id="subject" type="text" name="subject" maxlength="200" value="{{ old('subject') }}" class="stx-input" required>
+                     </div>
+                 </div>
+-
+-                <!-- Live Status Quick Pill -->
+-                <div class="p-6 rounded-3xl bg-surface border border-white/10 flex items-center justify-between">
+-                    <div class="flex items-center gap-3">
+-                        <div class="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></div>
+-                        <div>
+-                            <strong class="text-sm text-white block">Cluster Network Status</strong>
+-                            <span class="text-xs text-gray-400">All nodes & payment rails operational</span>
+-                        </div>
+-                    </div>
+-                    <a href="{{ route('hosting.status.index') }}" class="px-4 py-2 rounded-xl text-xs font-bold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 hover:bg-emerald-500/25 transition">
+-                        View Telemetry
+-                    </a>
++                <div class="stx-field">
++                    <label for="message" class="stx-label">Message</label>
++                    <textarea id="message" name="message" rows="7" minlength="10" maxlength="3000" class="stx-input" required>{{ old('message') }}</textarea>
+                 </div>
+-            </div>
++                <button type="submit" class="stx-btn">Send message <i class="ti ti-send"></i></button>
++                <p class="stx-hint">We reply by email.</p>
++            </form>
+         </div>
+ 
+-        <!-- FAQ Section -->
+-        <div class="mt-24 max-w-4xl mx-auto">
+-            <div class="text-center mb-12">
+-                <h2 class="text-3xl font-black text-white">Frequently Asked Questions</h2>
+-                <p class="text-sm text-gray-400 mt-2">Quick answers to common questions about our platform and billing.</p>
+-            </div>
+-
+-            <div class="space-y-4">
+-                <details class="p-6 rounded-2xl bg-surface border border-white/5 group">
+-                    <summary class="font-bold text-white text-sm cursor-pointer list-none flex items-center justify-between">
+-                        <span>How fast is my server provisioned after paying?</span>
+-                        <i class="ti ti-chevron-down text-gray-400 group-open:rotate-180 transition-transform"></i>
+-                    </summary>
+-                    <p class="text-xs text-gray-400 mt-3 leading-relaxed">
+-                        If you upload your payment slip (eZ Cash / HelaPay / Bank CDM receipt), our automated verification verifies the transaction and immediately provisions your container within 1 to 10 minutes. You will receive an SMS and email notification with your server IP and credentials.
+-                    </p>
+-                </details>
+-
+-                <details class="p-6 rounded-2xl bg-surface border border-white/5 group">
+-                    <summary class="font-bold text-white text-sm cursor-pointer list-none flex items-center justify-between">
+-                        <span>Can I change Minecraft versions (e.g. Paper to Fabric)?</span>
+-                        <i class="ti ti-chevron-down text-gray-400 group-open:rotate-180 transition-transform"></i>
+-                    </summary>
+-                    <p class="text-xs text-gray-400 mt-3 leading-relaxed">
+-                        Yes! All Minecraft plans include our instant version changer and full Egg selector. You can toggle between Paper, Purpur, Fabric, Forge, and Bedrock with a single click, or upload your own custom server JAR file via SFTP.
+-                    </p>
+-                </details>
+-
+-                <details class="p-6 rounded-2xl bg-surface border border-white/5 group">
+-                    <summary class="font-bold text-white text-sm cursor-pointer list-none flex items-center justify-between">
+-                        <span>What happens if my server runs out of RAM?</span>
+-                        <i class="ti ti-chevron-down text-gray-400 group-open:rotate-180 transition-transform"></i>
+-                    </summary>
+-                    <p class="text-xs text-gray-400 mt-3 leading-relaxed">
+-                        You can upgrade your plan at any time through the customer dashboard. Upgrades are seamless and preserve all world files, databases, and plugin configurations without data loss.
+-                    </p>
+-                </details>
++        <aside class="lg:col-span-5">
++            <div class="stx-panel">
++                <div class="px-5 py-4 border-b stx-rule stx-label">Other ways to reach us</div>
++                @forelse($channels as [$label, $value, $href])
++                    <a href="{{ $href }}" @if(str_starts_with($href, 'http')) target="_blank" rel="noopener" @endif class="stx-row flex items-center justify-between gap-4 px-5 py-4 border-b stx-rule last:border-b-0">
++                        <span class="stx-label">{{ $label }}</span>
++                        <span class="text-white text-[15px] truncate">{{ $value }}</span>
++                    </a>
++                @empty
++                    <div class="px-5 py-5 text-[15px] text-[var(--mut)]">Use the form and we will reply by email.</div>
++                @endforelse
++                <a href="{{ route('hosting.status.index') }}" class="stx-row flex items-center justify-between px-5 py-4 border-t stx-rule">
++                    <span class="stx-label">Server down?</span><span class="text-[var(--acc)] text-[15px]">Check status <i class="ti ti-arrow-up-right"></i></span>
++                </a>
+             </div>
+-        </div>
++        </aside>
+     </div>
+ </section>
+ @endsection
+diff --git a/panel/plugins/hosting-platform/resources/views/storefront/games.blade.php b/panel/plugins/hosting-platform/resources/views/storefront/games.blade.php
+index f1de5aa..db3cd40 100644
+--- a/panel/plugins/hosting-platform/resources/views/storefront/games.blade.php
++++ b/panel/plugins/hosting-platform/resources/views/storefront/games.blade.php
+@@ -5,129 +5,42 @@
+ @section('meta_keywords', 'game servers sri lanka, minecraft server list, fivem server hosting, bot hosting colombo, stx enterprises catalog')
+ 
+ @section('content')
+-<!-- Hero Section -->
+-<section class="relative pt-24 pb-16 overflow-hidden">
+-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+-        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold text-indigo-300 bg-indigo-500/10 border border-indigo-500/25 mb-6">
+-            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+-            <span>HIGH-FREQUENCY GAME ARCHITECTURE</span>
+-        </div>
+-        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight">
+-            High-Performance Dedicated <br>
+-            <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-300 to-cyan-300">
+-                Game Servers & Application Containers
+-            </span>
+-        </h1>
+-        <p class="mt-4 text-base sm:text-lg text-gray-400 max-w-2xl mx-auto leading-relaxed">
+-            Ultra-fast NVMe storage, unmetered DDoS mitigation, instant version switchers, and local Sri Lankan payment rails.
+-        </p>
+-    </div>
+-</section>
+-
+-<!-- Games Grid Section -->
+-<section class="pb-24">
+-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+-            @foreach($categories as $category)
+-                @foreach($category->products as $product)
+-                    <div class="rounded-3xl bg-surface border border-white/10 p-8 flex flex-col justify-between group hover:border-indigo-500/40 hover:-translate-y-1 transition duration-300 shadow-xl relative overflow-hidden">
+-                        <!-- Top Accent Line -->
+-                        <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-500 opacity-0 group-hover:opacity-100 transition duration-300"></div>
+-
+-                        <div>
+-                            <!-- Header Row: Icon + Badge -->
+-                            <div class="flex items-center justify-between mb-6">
+-                                <div class="w-14 h-14 rounded-2xl bg-indigo-500/15 border border-indigo-500/25 flex items-center justify-center text-indigo-400 text-3xl group-hover:scale-105 transition">
+-                                    <i class="ti {{ $product->icon ?: 'ti-device-gamepad-2' }}"></i>
+-                                </div>
+-                                <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider text-indigo-300 bg-indigo-500/15 border border-indigo-500/30">
+-                                    {{ $category->name }}
+-                                </span>
+-                            </div>
+-
+-                            <h3 class="text-xl font-bold text-white group-hover:text-indigo-300 transition">{{ $product->name }}</h3>
+-                            <p class="text-xs text-gray-400 mt-2 leading-relaxed">{{ $product->description }}</p>
+-
+-                            <!-- Starting Price -->
+-                            @if($product->plans->count() > 0)
+-                                @php $cheapest = $product->plans->first(); @endphp
+-                                <div class="mt-6 p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between">
+-                                    <div>
+-                                        <div class="text-[10px] uppercase font-bold text-gray-500">Starting from</div>
+-                                        <div class="text-lg font-black text-white font-mono">
+-                                            Rs. {{ number_format($cheapest->price_lkr, 0) }} <span class="text-xs text-gray-400 font-normal">/ mo</span>
+-                                        </div>
+-                                    </div>
+-                                    <span class="text-xs text-emerald-400 font-semibold bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
+-                                        {{ $product->plans->count() }} Available Tiers
+-                                    </span>
+-                                </div>
+-                            @endif
+-
+-                            <!-- Feature Bullets -->
+-                            <ul class="mt-6 space-y-2 text-xs text-gray-300">
+-                                <li class="flex items-center gap-2">
+-                                    <i class="ti ti-check text-emerald-400 text-sm"></i>
+-                                    <span>Instant automated container allocation</span>
+-                                </li>
+-                                <li class="flex items-center gap-2">
+-                                    <i class="ti ti-check text-emerald-400 text-sm"></i>
+-                                    <span>Ryzen 9 7950X & NVMe PCIe 4.0 storage</span>
+-                                </li>
+-                                <li class="flex items-center gap-2">
+-                                    <i class="ti ti-check text-emerald-400 text-sm"></i>
+-                                    <span>Sub-8ms Sri Lanka routing & DDoS shield</span>
+-                                </li>
+-                                <li class="flex items-center gap-2">
+-                                    <i class="ti ti-check text-emerald-400 text-sm"></i>
+-                                    <span>Full Web Console, SFTP & Version Changer</span>
+-                                </li>
+-                            </ul>
+-                        </div>
+-
+-                        <!-- Action Button -->
+-                        <div class="mt-8 pt-6 border-t border-white/10">
+-                            <a
+-                                href="{{ route('hosting.storefront.category', $category->slug) }}"
+-                                class="w-full py-3.5 rounded-xl font-bold text-sm text-center text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 transition shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2"
+-                            >
+-                                <span>Configure & Order</span>
+-                                <i class="ti ti-arrow-right text-sm"></i>
+-                            </a>
+-                        </div>
+-                    </div>
++<section class="border-b stx-rule">
++    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
++        <div class="stx-label mb-4">All servers</div>
++        <h1 class="stx-display text-5xl sm:text-7xl text-white">Pick a game,<br>pick a size.</h1>
++        <p class="mt-5 text-lg text-[var(--mut)] max-w-xl">Every plan is billed in Sri Lankan rupees. Jump to a game below.</p>
++        @if($categories->count() > 1)
++            <div class="mt-8 flex flex-wrap gap-2">
++                @foreach($categories as $c)
++                    <a href="#{{ $c->slug }}" class="stx-btn-ghost !py-2 text-sm">{{ $c->name }}</a>
+                 @endforeach
+-            @endforeach
+-        </div>
++            </div>
++        @endif
+     </div>
+ </section>
+ 
+-<!-- Enterprise Hardware Guarantee Section -->
+-<section class="py-20 border-t border-white/10 bg-[#05070B]">
+-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+-            <div class="p-8 rounded-3xl bg-surface border border-white/5 space-y-3">
+-                <i class="ti ti-cpu text-4xl text-indigo-400"></i>
+-                <h4 class="text-lg font-bold text-white">Uncapped CPU Bursting</h4>
+-                <p class="text-xs text-gray-400 leading-relaxed">
+-                    We never artificially throttle your server tickrates. Burst up to 5.7 GHz whenever world chunk generation or boss battles demand high compute.
+-                </p>
+-            </div>
+-            <div class="p-8 rounded-3xl bg-surface border border-white/5 space-y-3">
+-                <i class="ti ti-database text-4xl text-purple-400"></i>
+-                <h4 class="text-lg font-bold text-white">Gen4 NVMe Speeds</h4>
+-                <p class="text-xs text-gray-400 leading-relaxed">
+-                    Sustained 7,000 MB/s read and write performance ensures zero world save lag spikes and instantaneous server reboots in seconds.
+-                </p>
+-            </div>
+-            <div class="p-8 rounded-3xl bg-surface border border-white/5 space-y-3">
+-                <i class="ti ti-shield-check text-4xl text-emerald-400"></i>
+-                <h4 class="text-lg font-bold text-white">Automatic L3/L4/L7 Defense</h4>
+-                <p class="text-xs text-gray-400 leading-relaxed">
+-                    Our edge scrubbers inspect inbound gaming packets to drop UDP floods, SYN reflection, and botnets before they reach your container.
+-                </p>
++<section>
++    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16 space-y-16">
++        @forelse($categories as $category)
++            @php $plans = $category->products->flatMap->plans; @endphp
++            <div id="{{ $category->slug }}" class="scroll-mt-24">
++                <div class="flex items-end justify-between gap-4 mb-5">
++                    <div>
++                        <h2 class="stx-display text-4xl text-white">{{ $category->name }}</h2>
++                        @if($category->description)<p class="mt-2 text-[15px] text-[var(--mut)] max-w-2xl">{{ $category->description }}</p>@endif
++                    </div>
++                    <a href="{{ route('hosting.storefront.category', $category->slug) }}" class="hidden sm:inline shrink-0 text-[15px] text-[var(--acc)]">Details <i class="ti ti-arrow-right"></i></a>
++                </div>
++                @if($plans->isNotEmpty())
++                    @include('hosting-platform::storefront.partials.plan_table', ['plans' => $plans])
++                @else
++                    <div class="stx-panel p-6 text-[var(--mut)]">Plans coming soon.</div>
++                @endif
+             </div>
+-        </div>
++        @empty
++            <div class="stx-panel p-8 text-[var(--mut)]">No servers are on sale yet. Check back soon.</div>
++        @endforelse
+     </div>
+ </section>
+ @endsection
+diff --git a/panel/plugins/hosting-platform/resources/views/storefront/layout.blade.php b/panel/plugins/hosting-platform/resources/views/storefront/layout.blade.php
+index 7cff9e9..9c919cd 100644
+--- a/panel/plugins/hosting-platform/resources/views/storefront/layout.blade.php
++++ b/panel/plugins/hosting-platform/resources/views/storefront/layout.blade.php
+@@ -144,6 +144,15 @@
+         .stx-btn-ghost:hover { border-color: var(--acc); background: rgba(212,255,58,.06); }
+         .stx-dot { width:8px; height:8px; border-radius:50%; display:inline-block; flex:none; }
+         .stx-nav a.is-active { color: var(--acc); }
++        .stx-input { width:100%; padding:.7rem .85rem; background:var(--bg); border:1px solid var(--line2); border-radius:2px; color:var(--text); font-size:.95rem; }
++        .stx-input:focus { outline:none; border-color:var(--acc); }
++        .stx-input::placeholder { color:#5C626C; }
++        .stx-field > label { display:block; margin-bottom:.4rem; }
++        .stx-hint { font-size:.8rem; color:var(--mut); margin-top:.35rem; }
++        .stx-choice { display:flex; gap:.75rem; padding:.9rem 1rem; border:1px solid var(--line2); border-radius:2px; cursor:pointer; transition:border-color .15s, background .15s; }
++        .stx-choice:hover { border-color: var(--mut); }
++        .stx-choice:has(input:checked) { border-color: var(--acc); background: rgba(212,255,58,.05); }
++        .stx-choice input { accent-color: var(--acc); margin-top:.3rem; }
+         .stx-row { transition: background .15s; }
+         .stx-row:hover { background: var(--panel2); }
+ 
+diff --git a/panel/plugins/hosting-platform/resources/views/storefront/order_tracking.blade.php b/panel/plugins/hosting-platform/resources/views/storefront/order_tracking.blade.php
+index 886e899..d27d481 100644
+--- a/panel/plugins/hosting-platform/resources/views/storefront/order_tracking.blade.php
++++ b/panel/plugins/hosting-platform/resources/views/storefront/order_tracking.blade.php
+@@ -3,248 +3,214 @@
+ @section('title', 'Order #' . $order->order_number . ' Status')
+ 
+ @section('content')
+-<section class="py-12 md:py-20">
+-    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+-        <!-- Top Status Banner -->
+-        <div class="mb-10 p-6 sm:p-8 rounded-3xl bg-gray-900 border border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-2xl">
+-            <div class="flex items-center gap-5">
+-                <div class="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl 
+-                    @if($order->status === \BrandedHosting\Platform\Enums\OrderStatus::Completed) bg-emerald-950 text-emerald-400 border border-emerald-800
+-                    @elseif($order->status === \BrandedHosting\Platform\Enums\OrderStatus::UnderReview || $order->status === \BrandedHosting\Platform\Enums\OrderStatus::Approved || $order->status === \BrandedHosting\Platform\Enums\OrderStatus::Provisioning) bg-blue-950 text-blue-400 border border-blue-800
+-                    @elseif($order->status === \BrandedHosting\Platform\Enums\OrderStatus::Rejected) bg-red-950 text-red-400 border border-red-800
+-                    @else bg-amber-950 text-amber-400 border border-amber-800 @endif">
+-                    <i class="ti {{ $order->status->getIcon() }}"></i>
+-                </div>
+-                <div>
+-                    <div class="flex items-center gap-3">
+-                        <span class="text-xs font-mono font-bold text-gray-400">{{ $order->order_number }}</span>
+-                        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold 
+-                            @if($order->status === \BrandedHosting\Platform\Enums\OrderStatus::Completed) bg-emerald-500/20 text-emerald-300
+-                            @elseif($order->status === \BrandedHosting\Platform\Enums\OrderStatus::Rejected) bg-red-500/20 text-red-300
+-                            @elseif($order->status === \BrandedHosting\Platform\Enums\OrderStatus::UnderReview) bg-blue-500/20 text-blue-300
+-                            @else bg-amber-500/20 text-amber-300 @endif">
+-                            {{ $order->status->getLabel() }}
+-                        </span>
+-                    </div>
+-                    <h1 class="text-2xl font-black text-white mt-1">{{ $order->plan?->name ?? 'Server Plan' }}</h1>
+-                    <p class="text-xs text-gray-400 mt-0.5">Created on {{ $order->created_at->format('M d, Y • h:i A') }}</p>
++@php
++    $OS = \BrandedHosting\Platform\Enums\OrderStatus::class;
++    $VS = \BrandedHosting\Platform\Enums\VerificationStatus::class;
++
++    $st = $order->status;
++    $isOpen = in_array($st, [$OS::PendingPayment, $OS::Rejected], true);
++    $isReview = $st === $OS::UnderReview;
++    $isBuilding = in_array($st, [$OS::Approved, $OS::Provisioning], true);
++    $isDone = $st === $OS::Completed;
++    $isDead = in_array($st, [$OS::Cancelled, $OS::Expired], true);
++
++    $chip = match (true) {
++        $isDone => 'var(--ok)',
++        $isDead || $st === $OS::Rejected => 'var(--bad)',
++        default => 'var(--warn)',
++    };
++
++    // Which of the four steps are complete.
++    $reached = match (true) {
++        $isDone => 4,
++        $isBuilding => 3,
++        $isReview => 2,
++        default => 1,
++    };
++    $steps = ['Order placed', 'Payment slip sent', 'Payment verified', 'Server live'];
++
++    $snap = $order->plan_snapshot ?? [];
++    $fmt = fn ($n) => rtrim(rtrim(number_format($n, 1), '0'), '.');
++    $pm = $order->paymentMethod;
++    $lastRejected = $order->paymentSubmissions->where('verification_status', $VS::Rejected)->sortByDesc('created_at')->first();
++@endphp
++
++<section class="border-b stx-rule">
++    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-14">
++        <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
++            <div>
++                <div class="flex items-center gap-3 mb-3">
++                    <span class="stx-label">Order</span>
++                    <span class="stx-mono text-sm text-white select-all">{{ $order->order_number }}</span>
++                    <span class="inline-flex items-center gap-2 text-sm font-medium text-white"><span class="stx-dot" style="background: {{ $chip }}"></span>{{ $st->getLabel() }}</span>
+                 </div>
++                <h1 class="stx-display text-5xl sm:text-6xl text-white">{{ $order->plan?->name ?? 'Server plan' }}</h1>
++                <p class="mt-2 text-[var(--mut)]">Placed {{ $order->created_at->format('j M Y, g:i A') }}</p>
+             </div>
+-
+-            <div class="text-right sm:border-l sm:border-gray-800 sm:pl-8">
+-                <div class="text-xs text-gray-400">Total Payment Due</div>
+-                <div class="text-3xl font-black text-white">{{ $order->formatted_total }}</div>
+-                <div class="mt-3 flex items-center gap-2 justify-end">
+-                    <a href="{{ route('hosting.order.invoice', $order->uuid) }}" target="_blank" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-gray-200 bg-white/10 hover:bg-white/20 transition border border-white/10 shadow-sm">
+-                        <i class="ti ti-receipt text-indigo-400"></i> Invoice PDF
+-                    </a>
+-                    @if($order->server)
+-                        <a href="/server/{{ $order->server->uuid_short }}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 transition shadow-lg shadow-emerald-600/30">
+-                            <i class="ti ti-terminal-2"></i> Console
+-                        </a>
+-                    @endif
+-                </div>
++            <div class="lg:text-right">
++                <div class="stx-label">Total</div>
++                <div class="stx-mono text-3xl text-white">{{ $order->formatted_total }}</div>
++                <a href="{{ route('hosting.order.invoice', $order->uuid) }}" target="_blank" rel="noopener" class="inline-block mt-2 text-sm text-[var(--acc)] underline underline-offset-2">View invoice</a>
+             </div>
+         </div>
+ 
+-        @if(session('success'))
+-            <div class="mb-8 p-4 rounded-xl bg-emerald-950/80 border border-emerald-800 text-emerald-300 text-sm flex items-center gap-3">
+-                <i class="ti ti-circle-check text-xl"></i>
+-                <span>{{ session('success') }}</span>
+-            </div>
+-        @endif
+-
+-        @if($errors->any())
+-            <div class="mb-8 p-4 rounded-xl bg-red-950/80 border border-red-800 text-red-300 text-sm">
+-                <ul class="list-disc pl-5 space-y-1">
+-                    @foreach($errors->all() as $err)
+-                        <li>{{ $err }}</li>
+-                    @endforeach
+-                </ul>
+-            </div>
+-        @endif
+-
+-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+-            <!-- Left: Payment Instructions & Verification -->
+-            <div class="lg:col-span-2 space-y-8">
+-                <!-- If Pending or Rejected, show instructions and upload form -->
+-                @if($order->status === \BrandedHosting\Platform\Enums\OrderStatus::PendingPayment || $order->status === \BrandedHosting\Platform\Enums\OrderStatus::Rejected || $order->status === \BrandedHosting\Platform\Enums\OrderStatus::UnderReview)
+-                    <div class="p-6 sm:p-8 rounded-2xl bg-gray-900 border border-gray-800">
+-                        <h2 class="text-xl font-bold text-white mb-2 flex items-center gap-2">
+-                            <i class="ti ti-info-circle text-brand-400"></i> Payment Instructions
+-                        </h2>
+-                        <p class="text-xs text-gray-400 mb-6">Please transfer the exact amount using one of our verified Sri Lankan payment methods.</p>
+-
+-                        @if($order->paymentMethod)
+-                            <div class="p-5 rounded-2xl bg-gray-950 border border-gray-800 space-y-4">
+-                                <div class="flex items-center justify-between pb-3 border-b border-gray-800">
+-                                    <span class="text-sm font-bold text-white">{{ $order->paymentMethod->name }}</span>
+-                                    <span class="text-xs font-semibold px-2 py-0.5 rounded bg-brand-950 text-brand-300 border border-brand-800">Selected Method</span>
+-                                </div>
+-
+-                                @if($order->paymentMethod->bank_name)
+-                                    <div class="grid grid-cols-2 gap-4 text-xs">
+-                                        <div>
+-                                            <span class="text-gray-400">Bank Name:</span>
+-                                            <div class="font-bold text-white text-sm mt-0.5">{{ $order->paymentMethod->bank_name }}</div>
+-                                        </div>
+-                                        <div>
+-                                            <span class="text-gray-400">Branch:</span>
+-                                            <div class="font-bold text-white text-sm mt-0.5">{{ $order->paymentMethod->branch_name ?? 'Head Office' }}</div>
+-                                        </div>
+-                                        <div>
+-                                            <span class="text-gray-400">Account Number:</span>
+-                                            <div class="font-mono font-bold text-brand-400 text-base mt-0.5 select-all">{{ $order->paymentMethod->account_or_mobile_number }}</div>
+-                                        </div>
+-                                        <div>
+-                                            <span class="text-gray-400">Account Name:</span>
+-                                            <div class="font-bold text-white text-sm mt-0.5">{{ $order->paymentMethod->recipient_name }}</div>
+-                                        </div>
+-                                    </div>
+-                                @elseif($order->paymentMethod->account_or_mobile_number)
+-                                    <div class="text-xs">
+-                                        <span class="text-gray-400">Mobile / Wallet Number:</span>
+-                                        <div class="font-mono font-bold text-brand-400 text-lg mt-0.5 select-all">{{ $order->paymentMethod->account_or_mobile_number }}</div>
+-                                        <div class="text-gray-400 mt-1">Recipient: <strong class="text-white">{{ $order->paymentMethod->recipient_name }}</strong></div>
+-                                    </div>
+-                                @endif
+-
+-                                <div class="pt-3 border-t border-gray-800 text-xs text-gray-300 leading-relaxed whitespace-pre-line">
+-                                    {{ $order->paymentMethod->payment_instructions }}
+-                                </div>
+-                            </div>
+-                        @endif
+-
+-                        <!-- Proof Upload Form -->
+-                        <div class="mt-8 pt-8 border-t border-gray-800">
+-                            <h3 class="text-base font-bold text-white mb-2 flex items-center gap-2">
+-                                <i class="ti ti-upload text-brand-400"></i> Submit Payment Verification Proof
+-                            </h3>
+-                            <p class="text-xs text-gray-400 mb-6">Upload your deposit slip, bank transfer screenshot, or eZ Cash/HelaPay confirmation SMS receipt.</p>
+-
+-                            <form action="{{ route('hosting.order.submit_proof', $order->uuid) }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+-                                @csrf
+-                                <input type="hidden" name="payment_method_id" value="{{ $order->payment_method_id ?? $paymentMethods->first()?->id }}">
+-
+-                                <div>
+-                                    <label class="block text-xs font-semibold text-gray-300 mb-1.5">Bank Reference / eZ Cash Txn ID / HelaPay Ref *</label>
+-                                    <input type="text" name="transaction_reference" placeholder="e.g. 1029384756 or CDM-8821" value="{{ old('transaction_reference') }}" class="w-full px-3.5 py-2.5 rounded-xl bg-gray-950 border border-gray-800 text-white text-sm focus:border-brand-500 focus:outline-none" required>
+-                                </div>
+-
+-                                <div>
+-                                    <label class="block text-xs font-semibold text-gray-300 mb-1.5">Attach Proof Slip / Screenshot (JPG, PNG, WEBP, PDF - Max 10MB) *</label>
+-                                    <input type="file" name="proof_file" accept="image/jpeg,image/png,image/webp,application/pdf" class="w-full text-xs text-gray-400 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-brand-600 file:text-white hover:file:bg-brand-500 cursor-pointer" required>
+-                                </div>
++        @unless($isDead)
++        <ol class="mt-10 grid grid-cols-2 sm:grid-cols-4 border-t border-l stx-rule" aria-label="Order progress">
++            @foreach($steps as $i => $label)
++                @php $n = $i + 1; $on = $n <= $reached; $now = $n === $reached && !$isDone; @endphp
++                <li class="p-4 border-r border-b stx-rule" @if($now) aria-current="step" @endif>
++                    <div class="stx-mono text-xs" style="color: {{ $on ? 'var(--acc)' : 'var(--mut)' }}">{{ str_pad($n, 2, '0', STR_PAD_LEFT) }} {{ $on && !$now ? '/ done' : ($now ? '/ now' : '') }}</div>
++                    <div class="mt-1 font-medium {{ $on ? 'text-white' : 'text-[var(--mut)]' }}">{{ $label }}</div>
++                </li>
++            @endforeach
++        </ol>
++        @endunless
++    </div>
++</section>
+ 
+-                                <div>
+-                                    <label class="block text-xs font-semibold text-gray-300 mb-1.5">Optional Customer Notes</label>
+-                                    <textarea name="customer_notes" rows="2" placeholder="Any additional notes for verification staff..." class="w-full px-3.5 py-2 rounded-xl bg-gray-950 border border-gray-800 text-white text-sm focus:border-brand-500 focus:outline-none">{{ old('customer_notes') }}</textarea>
+-                                </div>
++<section>
++    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-14 grid lg:grid-cols-12 gap-10 lg:gap-14">
++        <div class="lg:col-span-8 space-y-10">
+ 
+-                                <button type="submit" class="w-full py-3.5 px-4 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-brand-600 to-purple-600 hover:from-brand-500 hover:to-purple-500 shadow-lg shadow-brand-500/20 transition">
+-                                    Submit Proof for Verification <i class="ti ti-arrow-right ml-1"></i>
+-                                </button>
+-                            </form>
+-                        </div>
++            @if(session('success'))
++                <div class="p-4 border text-sm" style="border-color:var(--ok); background:rgba(61,220,132,.07); color:#B6F2D0" role="status">{{ session('success') }}</div>
++            @endif
++            @if($errors->any())
++                <div class="p-4 border text-sm" style="border-color:var(--bad); background:rgba(255,92,92,.07); color:#FFB4B4" role="alert">
++                    <ul class="space-y-1">@foreach($errors->all() as $err)<li>{{ $err }}</li>@endforeach</ul>
++                </div>
++            @endif
++
++            {{-- STATE: waiting for payment / rejected --}}
++            @if($isOpen || $isReview)
++                @if($st === $OS::Rejected)
++                    <div class="p-4 border text-sm" style="border-color:var(--bad); background:rgba(255,92,92,.07); color:#FFB4B4">
++                        <strong class="text-white">We could not verify your last payment.</strong>
++                        @if($lastRejected?->staff_decision_notes) {{ $lastRejected->staff_decision_notes }} @endif
++                        Please send a new slip below.
+                     </div>
+-                @else
+-                    <!-- Active or Completed State -->
+-                    <div class="p-8 rounded-2xl bg-gray-900 border border-gray-800 text-center space-y-4">
+-                        <div class="w-16 h-16 rounded-full bg-emerald-950 border border-emerald-800 text-emerald-400 flex items-center justify-center text-3xl mx-auto">
+-                            <i class="ti ti-check"></i>
+-                        </div>
+-                        <h2 class="text-2xl font-bold text-white">Your Server Is Ready!</h2>
+-                        <p class="text-sm text-gray-300 max-w-md mx-auto">
+-                            Payment was verified and your container has been allocated and started on our server infrastructure.
+-                        </p>
+-                        @if($order->server)
+-                            <div class="pt-4">
+-                                <a href="/server/{{ $order->server->uuid_short }}" class="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl font-bold text-sm text-white bg-emerald-600 hover:bg-emerald-500 shadow-xl shadow-emerald-600/30 transition">
+-                                    <i class="ti ti-terminal-2 text-lg"></i> Manage in Server Console
+-                                </a>
+-                            </div>
+-                        @endif
++                @endif
++                @if($isReview)
++                    <div class="stx-panel p-5">
++                        <div class="text-white font-semibold">We are checking your payment.</div>
++                        <p class="mt-1 text-[15px] text-[var(--mut)]">A person on our team verifies every slip by hand. This page updates when it is done; you can safely close it.</p>
+                     </div>
+                 @endif
+ 
+-                <!-- Payment Submissions History -->
+-                @if($order->paymentSubmissions->count() > 0)
+-                    <div class="p-6 rounded-2xl bg-gray-900 border border-gray-800">
+-                        <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">
+-                            <i class="ti ti-history text-brand-400"></i> Verification Audit Log
+-                        </h3>
+-                        <div class="space-y-4">
+-                            @foreach($order->paymentSubmissions as $submission)
+-                                <div class="p-4 rounded-xl bg-gray-950 border border-gray-800 flex items-start justify-between">
+-                                    <div>
+-                                        <div class="flex items-center gap-2">
+-                                            <span class="text-xs font-bold text-white">Ref: {{ $submission->transaction_reference }}</span>
+-                                            <span class="px-2 py-0.5 rounded text-[10px] font-bold 
+-                                                @if($submission->verification_status === \BrandedHosting\Platform\Enums\VerificationStatus::Approved) bg-emerald-950 text-emerald-300 border border-emerald-800
+-                                                @elseif($submission->verification_status === \BrandedHosting\Platform\Enums\VerificationStatus::Rejected) bg-red-950 text-red-300 border border-red-800
+-                                                @else bg-amber-950 text-amber-300 border border-amber-800 @endif">
+-                                                {{ $submission->verification_status->getLabel() }}
+-                                            </span>
+-                                        </div>
+-                                        <div class="text-[11px] text-gray-500 mt-1">Submitted: {{ $submission->created_at->format('M d, Y • h:i A') }}</div>
+-                                        @if($submission->staff_decision_notes)
+-                                            <div class="text-xs text-amber-300 mt-2 bg-amber-950/40 p-2 rounded border border-amber-900">
+-                                                Staff Note: {{ $submission->staff_decision_notes }}
+-                                            </div>
+-                                        @endif
+-                                    </div>
+-                                    @if($submission->proofs->count() > 0)
+-                                        <a href="{{ $submission->proofs->first()->getDownloadUrl() }}" target="_blank" class="text-xs text-brand-400 hover:underline flex items-center gap-1">
+-                                            <i class="ti ti-file-text"></i> View Proof Slip
+-                                        </a>
++                @if($isOpen)
++                <div>
++                    <h2 class="flex items-center gap-3 mb-5"><span class="stx-mono text-sm" style="color:var(--acc)">01</span><span class="text-xl font-semibold text-white">Send {{ $order->formatted_total }}</span></h2>
++                    @if($pm)
++                        <div class="stx-panel">
++                            <div class="px-5 py-3 border-b stx-rule text-white font-semibold">{{ $pm->name }}</div>
++                            <dl class="px-5 py-4 grid sm:grid-cols-2 gap-x-6 gap-y-4 text-[15px]">
++                                @foreach([['Bank', $pm->bank_name], ['Branch', $pm->branch_name], [$pm->bank_name ? 'Account number' : 'Number', $pm->account_or_mobile_number], ['Account name', $pm->recipient_name]] as [$k, $v])
++                                    @if($v)
++                                        <div><dt class="stx-label">{{ $k }}</dt><dd class="mt-1 stx-mono text-white select-all break-all {{ str_contains($k, 'number') || $k === 'Number' ? 'text-lg' : '' }}" @if(str_contains($k, 'number') || $k === 'Number') style="color:var(--acc)" @endif>{{ $v }}</dd></div>
+                                     @endif
+-                                </div>
+-                            @endforeach
++                                @endforeach
++                            </dl>
++                            @if($pm->payment_instructions)
++                                <div class="px-5 py-4 border-t stx-rule text-[15px] text-[var(--mut)] whitespace-pre-line">{{ $pm->payment_instructions }}</div>
++                            @endif
+                         </div>
+-                    </div>
++                    @endif
++                </div>
+                 @endif
+-            </div>
+ 
+-            <!-- Right: Order Specs Sidebar -->
+-            <div class="space-y-6">
+-                <div class="p-6 rounded-2xl bg-gray-900 border border-gray-800">
+-                    <h3 class="text-base font-bold text-white mb-4">Allocated Specifications</h3>
+-                    
+-                    <ul class="space-y-3 text-xs text-gray-300">
+-                        <li class="flex justify-between py-1 border-b border-gray-800">
+-                            <span class="text-gray-400">RAM:</span>
+-                            <span class="font-bold text-white">{{ round(($order->plan_snapshot['memory_mb'] ?? 1024) / 1024, 1) }} GB</span>
+-                        </li>
+-                        <li class="flex justify-between py-1 border-b border-gray-800">
+-                            <span class="text-gray-400">vCPU Limit:</span>
+-                            <span class="font-bold text-white">{{ $order->plan_snapshot['cpu_percent'] ?? 100 }}%</span>
+-                        </li>
+-                        <li class="flex justify-between py-1 border-b border-gray-800">
+-                            <span class="text-gray-400">NVMe Storage:</span>
+-                            <span class="font-bold text-white">{{ round(($order->plan_snapshot['disk_mb'] ?? 10240) / 1024, 1) }} GB</span>
+-                        </li>
+-                        <li class="flex justify-between py-1 border-b border-gray-800">
+-                            <span class="text-gray-400">Databases:</span>
+-                            <span class="font-bold text-white">{{ $order->plan_snapshot['database_limit'] ?? 1 }}</span>
+-                        </li>
+-                        <li class="flex justify-between py-1 border-b border-gray-800">
+-                            <span class="text-gray-400">Snapshots/Backups:</span>
+-                            <span class="font-bold text-white">{{ $order->plan_snapshot['backup_limit'] ?? 2 }}</span>
+-                        </li>
+-                    </ul>
++                <div>
++                    <h2 class="flex items-center gap-3 mb-5">
++                        <span class="stx-mono text-sm" style="color:var(--acc)">{{ $isOpen ? '02' : '+' }}</span>
++                        <span class="text-xl font-semibold text-white">{{ $isOpen ? 'Upload your payment slip' : 'Need to send another slip?' }}</span>
++                    </h2>
++                    <form action="{{ route('hosting.order.submit_proof', $order->uuid) }}" method="POST" enctype="multipart/form-data" class="stx-panel p-5 space-y-5">
++                        @csrf
++                        <input type="hidden" name="payment_method_id" value="{{ $order->payment_method_id ?? $paymentMethods->first()?->id }}">
++                        <div class="stx-field">
++                            <label for="transaction_reference" class="stx-label">Transaction reference</label>
++                            <input id="transaction_reference" type="text" name="transaction_reference" maxlength="100" placeholder="e.g. 1029384756" value="{{ old('transaction_reference') }}" class="stx-input" required>
++                        </div>
++                        <div class="stx-field">
++                            <label for="proof_file" class="stx-label">Slip (JPG, PNG, WEBP or PDF, up to {{ round(config('hosting-platform.proof_uploads.max_file_size_kb', 10240) / 1024) }} MB)</label>
++                            <input id="proof_file" type="file" name="proof_file" accept="image/jpeg,image/png,image/webp,application/pdf" class="stx-input" required>
++                            <p class="stx-hint">Each slip can only be used once.</p>
++                        </div>
++                        <div class="stx-field">
++                            <label for="customer_notes" class="stx-label">Note for our team (optional)</label>
++                            <textarea id="customer_notes" name="customer_notes" rows="2" maxlength="1000" class="stx-input">{{ old('customer_notes') }}</textarea>
++                        </div>
++                        <button type="submit" class="stx-btn">Send slip <i class="ti ti-upload"></i></button>
++                    </form>
++                </div>
+ 
++            {{-- STATE: approved, server being built --}}
++            @elseif($isBuilding)
++                <div class="stx-panel p-6">
++                    <div class="flex items-center gap-3"><span class="stx-dot" style="background:var(--warn)"></span><span class="text-xl font-semibold text-white">Payment verified. Setting up your server.</span></div>
++                    <p class="mt-2 text-[15px] text-[var(--mut)]">This usually takes a few minutes. Reload this page to check; it will show a link to your server as soon as it is ready. If nothing changes after 30 minutes, <a href="{{ route('hosting.storefront.contact') }}" class="underline">contact us</a> with order {{ $order->order_number }}.</p>
++                </div>
++
++            {{-- STATE: live --}}
++            @elseif($isDone)
++                <div class="stx-panel p-6">
++                    <div class="flex items-center gap-3"><span class="stx-dot" style="background:var(--ok)"></span><span class="text-xl font-semibold text-white">Your server is live.</span></div>
+                     @if($order->server)
+-                        <div class="mt-6 pt-6 border-t border-gray-800">
+-                            <h4 class="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-2">Live Node Details</h4>
+-                            <div class="text-xs text-gray-300 space-y-1">
+-                                <div>Node: <strong class="text-white">{{ $order->server->node->name }}</strong></div>
+-                                <div>Address: <span class="font-mono text-brand-300">{{ $order->server->allocation->display_address ?? 'Configuring...' }}</span></div>
+-                            </div>
+-                        </div>
++                        <dl class="mt-5 grid sm:grid-cols-2 gap-4 text-[15px]">
++                            @if($order->server->allocation)<div><dt class="stx-label">Address</dt><dd class="mt-1 stx-mono text-white select-all">{{ $order->server->allocation->display_address ?? 'Configuring' }}</dd></div>@endif
++                            @if($order->server->node)<div><dt class="stx-label">Node</dt><dd class="mt-1 stx-mono text-white">{{ $order->server->node->name }}</dd></div>@endif
++                        </dl>
++                        <a href="/server/{{ $order->server->uuid_short }}" class="stx-btn mt-6">Open control panel <i class="ti ti-arrow-up-right"></i></a>
+                     @endif
+                 </div>
+-            </div>
++
++            {{-- STATE: cancelled / expired --}}
++            @elseif($isDead)
++                <div class="stx-panel p-6">
++                    <div class="text-xl font-semibold text-white">This order is {{ strtolower($st->getLabel()) }}.</div>
++                    <p class="mt-2 text-[15px] text-[var(--mut)]">No server was created and nothing further is needed. If you already paid, please <a href="{{ route('hosting.storefront.contact') }}" class="underline">contact us</a> with the order number.</p>
++                    @if($order->plan)<a href="{{ route('hosting.checkout.show', $order->plan->slug) }}" class="stx-btn mt-5">Order again</a>@endif
++                </div>
++            @endif
++
++            {{-- Submission history --}}
++            @if($order->paymentSubmissions->isNotEmpty())
++                <div>
++                    <h2 class="stx-label mb-3">Payment slips sent</h2>
++                    <div class="stx-panel divide-y" style="--tw-divide-opacity:1">
++                        @foreach($order->paymentSubmissions->sortByDesc('created_at') as $sub)
++                            @php $vc = match ($sub->verification_status) { $VS::Approved => 'var(--ok)', $VS::Rejected => 'var(--bad)', default => 'var(--warn)' }; @endphp
++                            <div class="px-5 py-4 border-b stx-rule last:border-b-0 flex flex-wrap items-center justify-between gap-3">
++                                <div>
++                                    <div class="stx-mono text-sm text-white">Ref {{ $sub->transaction_reference }}</div>
++                                    <div class="text-sm text-[var(--mut)]">{{ $sub->created_at->format('j M Y, g:i A') }}</div>
++                                    @if($sub->staff_decision_notes)<div class="text-sm text-[var(--mut)] mt-1">Note from staff: {{ $sub->staff_decision_notes }}</div>@endif
++                                </div>
++                                <div class="flex items-center gap-4">
++                                    <span class="inline-flex items-center gap-2 text-sm text-white"><span class="stx-dot" style="background:{{ $vc }}"></span>{{ $sub->verification_status->getLabel() }}</span>
++                                    @if($sub->proofs->isNotEmpty())<a href="{{ $sub->proofs->first()->getDownloadUrl() }}" target="_blank" rel="noopener" class="text-sm text-[var(--acc)] underline underline-offset-2">View slip</a>@endif
++                                </div>
++                            </div>
++                        @endforeach
++                    </div>
++                </div>
++            @endif
+         </div>
++
++        {{-- Spec sidebar --}}
++        <aside class="lg:col-span-4">
++            <div class="stx-panel lg:sticky lg:top-24">
++                <div class="px-5 py-4 border-b stx-rule stx-label">What you ordered</div>
++                <dl class="px-5 py-4 space-y-2.5 text-[15px]">
++                    <div class="flex justify-between"><dt class="text-[var(--mut)]">Game</dt><dd class="text-white">{{ $snap['product_name'] ?? ($order->plan?->product?->name ?? '') }}</dd></div>
++                    <div class="flex justify-between"><dt class="text-[var(--mut)]">RAM</dt><dd class="stx-mono text-white">{{ $fmt(($snap['memory_mb'] ?? 0) / 1024) }} GB</dd></div>
++                    <div class="flex justify-between"><dt class="text-[var(--mut)]">CPU</dt><dd class="stx-mono text-white">{{ $snap['cpu_percent'] ?? 0 }}%</dd></div>
++                    <div class="flex justify-between"><dt class="text-[var(--mut)]">Disk</dt><dd class="stx-mono text-white">{{ $fmt(($snap['disk_mb'] ?? 0) / 1024) }} GB</dd></div>
++                    @if(($snap['database_limit'] ?? 0) > 0)<div class="flex justify-between"><dt class="text-[var(--mut)]">Databases</dt><dd class="stx-mono text-white">{{ $snap['database_limit'] }}</dd></div>@endif
++                    @if(($snap['backup_limit'] ?? 0) > 0)<div class="flex justify-between"><dt class="text-[var(--mut)]">Backup slots</dt><dd class="stx-mono text-white">{{ $snap['backup_limit'] }}</dd></div>@endif
++                </dl>
++                <div class="px-5 py-4 border-t stx-rule text-sm text-[var(--mut)]">Questions? <a href="{{ route('hosting.storefront.contact') }}" class="text-[var(--acc)] underline underline-offset-2">Contact us</a> and quote {{ $order->order_number }}.</div>
++            </div>
++        </aside>
+     </div>
+ </section>
+ @endsection
+diff --git a/panel/plugins/hosting-platform/resources/views/storefront/partials/plan_table.blade.php b/panel/plugins/hosting-platform/resources/views/storefront/partials/plan_table.blade.php
+new file mode 100644
+index 0000000..9eaa46e
+--- /dev/null
++++ b/panel/plugins/hosting-platform/resources/views/storefront/partials/plan_table.blade.php
+@@ -0,0 +1,41 @@
++{{-- Spec table for a collection of HostingPlan. Expects $plans. --}}
++@php $fmtGb = fn ($n) => rtrim(rtrim(number_format($n, 1), '0'), '.'); @endphp
++<div class="stx-panel overflow-x-auto">
++    <table class="w-full text-left min-w-[680px]">
++        <thead>
++            <tr class="border-b stx-rule">
++                <th class="stx-label font-normal px-4 py-3">Plan</th>
++                <th class="stx-label font-normal px-4 py-3 text-right">RAM</th>
++                <th class="stx-label font-normal px-4 py-3 text-right">CPU</th>
++                <th class="stx-label font-normal px-4 py-3 text-right">Disk</th>
++                <th class="stx-label font-normal px-4 py-3">Includes</th>
++                <th class="stx-label font-normal px-4 py-3 text-right">Price</th>
++                <th class="px-4 py-3"><span class="sr-only">Order</span></th>
++            </tr>
++        </thead>
++        <tbody>
++            @foreach($plans as $plan)
++                <tr class="stx-row border-b stx-rule last:border-b-0">
++                    <td class="px-4 py-4">
++                        <div class="flex items-center gap-2">
++                            <span class="text-white font-semibold text-lg">{{ $plan->name }}</span>
++                            @if($plan->display_badge)
++                                <span class="stx-label px-1.5 py-0.5 border" style="border-color:var(--acc); color:var(--acc)">{{ $plan->display_badge }}</span>
++                            @endif
++                        </div>
++                        @if($plan->tagline)<div class="text-sm text-[var(--mut)] line-clamp-1">{{ $plan->tagline }}</div>@endif
++                    </td>
++                    <td class="px-4 py-4 stx-mono text-sm text-white text-right whitespace-nowrap">{{ $fmtGb($plan->memory_gb) }} GB</td>
++                    <td class="px-4 py-4 stx-mono text-sm text-white text-right">{{ $plan->cpu_percent }}%</td>
++                    <td class="px-4 py-4 stx-mono text-sm text-white text-right whitespace-nowrap">{{ $fmtGb($plan->disk_gb) }} GB</td>
++                    <td class="px-4 py-4 text-sm text-[var(--mut)]">{{ collect($plan->display_features)->slice(3, 3)->implode(' · ') }}</td>
++                    <td class="px-4 py-4 text-right whitespace-nowrap">
++                        <span class="stx-mono text-white">Rs. {{ number_format((float) $plan->price_lkr, 0) }}</span>
++                        <span class="stx-mono text-xs text-[var(--mut)]">/ {{ strtolower($plan->billing_period->getLabel()) }}</span>
++                    </td>
++                    <td class="px-4 py-4 text-right"><a href="{{ route('hosting.checkout.show', $plan->slug) }}" class="stx-btn !py-2 text-sm">Order</a></td>
++                </tr>
++            @endforeach
++        </tbody>
++    </table>
++</div>
+diff --git a/panel/plugins/hosting-platform/src/Providers/HostingPlatformServiceProvider.php b/panel/plugins/hosting-platform/src/Providers/HostingPlatformServiceProvider.php
+index 9b6d6c8..2f79f91 100644
+--- a/panel/plugins/hosting-platform/src/Providers/HostingPlatformServiceProvider.php
++++ b/panel/plugins/hosting-platform/src/Providers/HostingPlatformServiceProvider.php
+@@ -7,6 +7,8 @@ use App\Models\Role;
+ use BrandedHosting\Platform\Console\Commands\CheckStatusMonitorsCommand;
+ use BrandedHosting\Platform\Console\Commands\ExpireStaleOrdersCommand;
+ use Illuminate\Console\Scheduling\Schedule;
++use BrandedHosting\Platform\Models\HostingSeoSetting;
++use Illuminate\Support\Facades\View;
+ use Illuminate\Support\ServiceProvider;
+ 
+ class HostingPlatformServiceProvider extends ServiceProvider
+@@ -43,6 +45,11 @@ class HostingPlatformServiceProvider extends ServiceProvider
+ 
+     public function boot(): void
+     {
++        // Child views run before the layout, so $seo must be shared rather than set inside the layout.
++        View::composer('hosting-platform::storefront.*', function ($view) {
++            $view->with('seo', HostingSeoSetting::current());
++        });
++
+         if ($this->app->runningInConsole()) {
+             $this->commands([
+                 CheckStatusMonitorsCommand::class,
+-- 
+2.43.0
+

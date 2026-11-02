@@ -5,12 +5,14 @@ namespace BrandedHosting\Platform\Http\Controllers;
 use App\Http\Controllers\Controller;
 use BrandedHosting\Platform\Models\HostingCategory;
 use BrandedHosting\Platform\Models\HostingPlan;
+use BrandedHosting\Platform\Models\HostingSeoSetting;
 use BrandedHosting\Platform\Models\StatusMonitor;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Throwable;
 
 class StorefrontController extends Controller
 {
@@ -123,10 +125,27 @@ class StorefrontController extends Controller
             'message' => 'required|string|min:10|max:3000',
         ]);
 
-        Log::info('[Storefront Contact Form Submission]', $validated);
+        $seo = HostingSeoSetting::current();
+        $to = $seo->contact_email;
 
-        // Flash confirmation
-        return redirect()->back()->with('contact_success', "Thank you {$validated['name']}! Your dispatch inquiry has been routed to our Colombo NOC desk. Ticket ID #STX-" . strtoupper(substr(md5(uniqid()), 0, 6)) . ' has been generated.');
+        try {
+            Mail::raw(
+                "Department: {$validated['department']}\nFrom: {$validated['name']} <{$validated['email']}>\n\n{$validated['message']}",
+                function ($message) use ($validated, $to) {
+                    $message->to($to)
+                        ->replyTo($validated['email'], $validated['name'])
+                        ->subject('[Contact:' . $validated['department'] . '] ' . $validated['subject']);
+                }
+            );
+        } catch (Throwable $e) {
+            report($e);
+
+            return redirect()->back()->withInput()->withErrors([
+                'message' => "We could not send your message right now. Please email us directly at {$to}.",
+            ]);
+        }
+
+        return redirect()->back()->with('contact_success', 'Thanks ' . $validated['name'] . ', your message has been sent. We will reply by email.');
     }
 
     /**

@@ -104,7 +104,7 @@
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-gray-300 mb-1.5">Account Password</label>
-                                    <input type="password" name="guest_password" class="w-full px-4 py-3 rounded-xl bg-black/50 border border-white/10 text-white text-sm focus:border-indigo-500 focus:outline-none" placeholder="Min. 8 characters" required>
+                                    <input type="password" name="guest_password" class="w-full px-4 py-3 rounded-xl bg-black/50 border border-white/10 text-white text-sm focus:border-indigo-500 focus:outline-none" placeholder="Min. 10 characters" required>
                                 </div>
                             </div>
                         </div>

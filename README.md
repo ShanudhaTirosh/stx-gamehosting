@@ -7,7 +7,7 @@ STX Enterprises is a unified, commercial-grade cloud and game server hosting pla
 ## 🌟 Platform Highlights
 
 - **Branded Storefront & Customer Portal**: Custom modern Glassmorphism storefront with dynamic pricing in Sri Lankan Rupees (**LKR**).
-- **Sri Lanka Payment Rails**: Direct Bank Transfer (Commercial Bank, Sampath, BOC, HNB, Peoples Bank), Dialog eZ Cash, and Helakuru HelaPay with slip uploads and instant SHA-256 deduplication.
+- **Sri Lanka Payment Rails**: Direct Bank Transfer (Commercial Bank, Sampath, BOC, HNB, Peoples Bank), Dialog eZ Cash, and Helakuru HelaPay with slip uploads and SHA-256 duplicate-slip detection.
 - **Automated Invoice Generator**: Official printable and downloadable tax invoices (`#INV-STX-XXXXX`) with verification signatures and real-time payment stamps.
 - **Automated Live Status Page (`/status`)**: Real-time cluster health monitoring, MariaDB/Redis latency metrics, Wings node statuses, and 90-day SLA history.
 - **Game & Software Managers**:
@@ -29,14 +29,17 @@ STX Enterprises is a unified, commercial-grade cloud and game server hosting pla
 | Service / Interface | URL | Description |
 | :--- | :--- | :--- |
 | **Public Storefront** | [http://localhost/](http://localhost/) | Modern glassmorphism hosting portal & plans |
-| **Cluster Status** | [http://localhost/status](http://localhost/status) | Real-time automated system telemetry |
+| **Cluster Status** | [http://localhost/status](http://localhost/status) | Live status page, served by the panel |
 | **Client Registration** | [http://localhost/server/register](http://localhost/server/register) | Customer self-registration |
 | **Client Dashboard** | [http://localhost/customer-orders](http://localhost/customer-orders) | Customer services and order tracking |
 | **Admin Portal** | [http://localhost/admin](http://localhost/admin) | Master administration & payment approval |
 
-### Default Administrative Credentials
-- **Email**: `admin@pelican.local`
-- **Password**: `Password123!`
+### First admin account
+There are no default credentials. After the stack is up, create your admin:
+
+```bash
+docker compose exec panel php artisan p:user:make
+```
 
 ---
 
@@ -72,3 +75,18 @@ STX Enterprises is a unified, commercial-grade cloud and game server hosting pla
 
 Copyright &copy; 2026 STX Enterprises Lanka (Pvt) Ltd. All rights reserved.  
 Proprietary Commercial Software.
+
+---
+
+## 🚦 Going to production
+
+1. `cp .env.example .env` and fill in the REQUIRED values (compose refuses to start without them).
+2. `docker compose up -d --build`, then create your admin with `p:user:make` (see above).
+3. **Install Wings** on each game node and add it under *Admin → Nodes*. Give the node the tag `game-node`, plus `sg` and/or `de` to match the regions offered at checkout (tags are configurable in `hosting-platform.php`). Add port allocations to the node. **Orders cannot be provisioned until at least one public node with free allocations exists.** The platform never invents nodes or ports.
+4. Create an *egg* for every product and give required egg variables a default.
+5. Add a Database Host if your plans include databases.
+6. Put the panel behind HTTPS (set `APP_URL` to the https URL) and back up the `stx-db` and `stx-panel-data` volumes, plus your `.env`.
+7. Make sure mail works: the contact form and order emails use SMTP.
+
+### How an order flows
+Customer orders → uploads payment slip → staff verify and press **Approve** → a queue job provisions the server (the container runs a queue worker). If provisioning fails (for example no node has capacity) the order returns to *Approved* with the error on its provisioning record. Fix the cause and press **Retry Deploy**. Unpaid orders expire automatically after `HOSTING_ORDER_EXPIRATION_DAYS` (default 3).
