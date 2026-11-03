@@ -2,6 +2,10 @@
 
 return [
 
+    // URL path of the client panel (the customers' server list). It must differ from the storefront,
+    // which owns '/'. Customers log in at /<path>/login and land on /<path>.
+    'client_path' => trim((string) env('APP_CLIENT_PATH', 'app'), '/'),
+
     'auth' => [
         '2fa_required' => env('APP_2FA_REQUIRED', 0),
         '2fa' => [

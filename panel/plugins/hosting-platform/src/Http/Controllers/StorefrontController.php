@@ -21,10 +21,6 @@ class StorefrontController extends Controller
      */
     public function index(Request $request): View|RedirectResponse
     {
-        if ($request->has('dashboard') && Auth::check()) {
-            return redirect(Auth::user()->isRootAdmin() ? '/admin' : '/customer-orders');
-        }
-
         $categories = HostingCategory::query()
             ->where('is_visible', true)
             ->with(['products' => function ($query) {

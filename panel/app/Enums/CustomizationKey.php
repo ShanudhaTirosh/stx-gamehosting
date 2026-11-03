@@ -26,7 +26,7 @@ enum CustomizationKey: string
             self::TopNavigation => config('panel.filament.default-navigation', 'sidebar'),
             self::DashboardLayout => 'grid',
             self::ButtonStyle => true,
-            self::RedirectToAdmin => false,
+            self::RedirectToAdmin => true,
             // 0 means "unset", the table falls back to its contextual default (see ListServers).
             self::ServersPerPage => 0,
         };

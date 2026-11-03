@@ -90,3 +90,25 @@ Proprietary Commercial Software.
 
 ### How an order flows
 Customer orders → uploads payment slip → staff verify and press **Approve** → a queue job provisions the server (the container runs a queue worker). If provisioning fails (for example no node has capacity) the order returns to *Approved* with the error on its provisioning record. Fix the cause and press **Retry Deploy**. Unpaid orders expire automatically after `HOSTING_ORDER_EXPIRATION_DAYS` (default 3).
+
+### Billing lifecycle (renewals & suspensions)
+Each server order carries a `paid_until` date. The `hosting:run-billing` command runs hourly and:
+- Creates a renewal invoice 7 days before `paid_until` (configurable with `BILLING_INVOICE_DAYS`).
+- Sends a reminder 3 days out and a final notice 1 day out (`BILLING_REMINDER_DAYS`, `BILLING_FINAL_REMINDER_DAYS`).
+- Suspends the server after a grace period (`BILLING_GRACE_DAYS`, default 3) if no approved payment exists.
+- Never deletes servers — removal is a staff decision.
+- Will not suspend while a payment slip is awaiting review.
+
+Customers pay the renewal invoice the same way as their first order (upload slip → staff approve → `ApplyRenewalJob` extends `paid_until` and unsuspends).
+
+### Legal pages
+`/terms` and `/privacy` describe what this system actually does (manual payment checks, renewals, suspension, data kept) and read their numbers (order expiry, invoice and grace days, activity-log retention) from your configuration. They are a sound starting point, not legal advice: have a Sri Lankan lawyer review them, and update the "Last updated" date in `terms.blade.php` and `privacy.blade.php` whenever you change them. If you add analytics or any other script under SEO Settings, update the Privacy Policy to say so.
+
+### Where things live, and who goes where after login
+| URL | What it is |
+| --- | --- |
+| `/` | The public storefront. Anyone can browse it, signed in or not. |
+| `/app` | The **client panel**: customers sign in here (`/app/login`) and manage their servers. Orders and invoices are at `/app/customer-orders`. |
+| `/admin` | The **admin panel**. |
+
+After signing in, **admins go to `/admin`** and **everyone else goes to `/app`**. (An admin can switch this off under *Profile → Redirect to admin*.) If someone was sent to the login page from a specific page, they return to that page instead. The old `/login`, `/customer-orders` and `/account` URLs still work and forward to the new places. The client panel's path is set with `APP_CLIENT_PATH` (default `app`); it must not be empty, because `/` belongs to the storefront.

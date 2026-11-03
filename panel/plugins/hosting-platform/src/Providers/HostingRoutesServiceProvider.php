@@ -17,6 +17,15 @@ class HostingRoutesServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->routes(function () {
+            // Old client-panel URLs (before the panel moved off the site root) keep working.
+            if (config('panel.client_path', 'app') !== '') {
+                Route::middleware(['web'])->group(function () {
+                    foreach (['customer-orders', 'account'] as $legacy) {
+                        Route::get('/' . $legacy, fn () => redirect(url(trim(config('panel.client_path', 'app') . '/' . $legacy, '/'))));
+                    }
+                });
+            }
+
             Route::middleware(['web'])->group(function () {
                 // Public Storefront & Core Pages
                 Route::get('/', [StorefrontController::class, 'index'])->name('hosting.storefront.index');

@@ -67,6 +67,8 @@ services:
       APP_DEBUG: "false"
       APP_ENV: "production"
       APP_INSTALLED: "true"
+      # Customers' server list lives here; the storefront owns "/". Admins use /admin.
+      APP_CLIENT_PATH: "${APP_CLIENT_PATH:-app}"
       # Keep the same key forever; losing it makes stored secrets (node tokens, DB passwords) unreadable.
       APP_KEY: "${APP_KEY:?REQUIRED - generate with: echo base64:$$(head -c 32 /dev/urandom | base64)}"
       XDG_DATA_HOME: /pelican-data

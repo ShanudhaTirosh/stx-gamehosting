@@ -14,7 +14,7 @@
                 Network Telemetry & Status
             </span>
         </a>
-        <a class="hover:text-primary-500 dark:hover:text-primary-400 transition" href="{{ url('/customer-orders') }}">
+        <a class="hover:text-primary-500 dark:hover:text-primary-400 transition" href="{{ url(trim(config('panel.client_path', 'app') . '/customer-orders', '/')) }}">
             <span class="inline-flex items-center gap-1.5">
                 <x-filament::icon icon="tabler-receipt-2" class="w-3.5 h-3.5" />
                 My Billing & Orders

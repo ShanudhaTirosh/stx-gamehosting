@@ -131,7 +131,7 @@ class OAuthController extends Controller
     {
         auth()->guard()->login($user, true);
 
-        return redirect('/');
+        return redirect()->intended(\App\Http\Responses\LoginResponse::homeUrl($user));
     }
 
     private function errorRedirect(?string $error = null): RedirectResponse

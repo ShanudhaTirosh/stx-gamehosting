@@ -198,7 +198,7 @@
                 <!-- Action / Authentication Buttons -->
                 <div class="flex items-center gap-3">
                     @auth
-                        <a href="{{ auth()->user()->isRootAdmin() ? url('/admin') : url('/customer-orders') }}" class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl hover:from-indigo-500 hover:to-purple-500 transition shadow-lg shadow-indigo-600/30">
+                        <a href="{{ auth()->user()->isRootAdmin() ? url('/admin') : url(config('panel.client_path', 'app')) }}" class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl hover:from-indigo-500 hover:to-purple-500 transition shadow-lg shadow-indigo-600/30">
                             <i class="ti ti-layout-dashboard"></i> {{ auth()->user()->isRootAdmin() ? 'Admin Portal' : 'My Dashboard' }}
                         </a>
                     @else
@@ -289,7 +289,7 @@
                         <li><a href="{{ route('hosting.status.index') }}" class="hover:text-white transition flex items-center gap-1.5">
                             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Live Telemetry Status
                         </a></li>
-                        <li><a href="{{ url('/customer-orders') }}" class="hover:text-white transition">Customer Portal & Invoices</a></li>
+                        <li><a href="{{ url(trim(config('panel.client_path', 'app') . '/customer-orders', '/')) }}" class="hover:text-white transition">My orders</a></li>
                         <li><a href="{{ url('/admin') }}" class="hover:text-white transition">Staff Admin Login</a></li>
                     </ul>
                 </div>

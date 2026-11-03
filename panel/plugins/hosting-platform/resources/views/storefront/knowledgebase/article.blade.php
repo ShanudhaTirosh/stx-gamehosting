@@ -85,10 +85,10 @@
             <div class="p-6 rounded-2xl bg-white/[0.02] border border-white/10 space-y-3">
                 <h3 class="text-xs font-bold uppercase tracking-wider text-gray-400">Quick Dashboard Actions</h3>
                 <div class="space-y-2 text-xs">
-                    <a href="{{ url('/servers') }}" class="flex items-center gap-2 p-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition">
+                    <a href="{{ url(config('panel.client_path', 'app')) }}" class="flex items-center gap-2 p-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition">
                         <i class="ti ti-brand-docker text-indigo-400"></i> My Game Servers
                     </a>
-                    <a href="{{ url('/customer-orders') }}" class="flex items-center gap-2 p-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition">
+                    <a href="{{ url(trim(config('panel.client_path', 'app') . '/customer-orders', '/')) }}" class="flex items-center gap-2 p-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition">
                         <i class="ti ti-receipt-2 text-emerald-400"></i> My Orders & Invoices
                     </a>
                     <a href="{{ route('hosting.status.index') }}" class="flex items-center gap-2 p-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition">

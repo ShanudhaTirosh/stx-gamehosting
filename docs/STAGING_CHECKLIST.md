@@ -12,6 +12,15 @@ Each step says what you should see. Anything else is a bug: note the step and th
 - [ ] At least one product has an egg, and every required egg variable has a default.
 - [ ] Mail works: Admin > Settings > Mail > send a test email.
 
+## 0b. Sign-in routing
+- [ ] Signed out, open `/`: the storefront shows. Click **Sign in**: you reach `/app/login`.
+- [ ] Sign in as a **customer**: you land on `/app` (their server list), not on the storefront. The server list is reachable and opens a server's console.
+- [ ] While signed in as a customer, open `/`: the storefront still shows (you can browse plans), and the header button says **My servers** and goes to `/app`.
+- [ ] Sign in as an **admin** (via `/app/login` or `/admin/login`): you land on `/admin`. In *Profile*, turn off *Redirect to admin*, sign out and in again: you now land on `/app`.
+- [ ] Signed out, open `/app/customer-orders`: you are sent to login, and after signing in you return to that page.
+- [ ] Old links: `/login`, `/customer-orders` and `/account` forward to the new addresses. `/login` does not loop.
+- [ ] Guest checkout: after paying and returning later, signing in with the new account lands on `/app`.
+
 ## 1. Storefront renders
 - [ ] `/`, `/hosting/games`, a category page, `/about`, `/contact`, `/status`, `/help`: all load, no PHP errors, fonts and colours look right on desktop and phone width.
 - [ ] Footer shows your real email/phone (set under Admin > SEO Settings). No placeholder numbers.
