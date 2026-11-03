@@ -39,34 +39,73 @@
 @endsection
 
 @section('content')
-<section class="border-b stx-rule">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
-        <nav class="stx-label mb-5" aria-label="Breadcrumb">
-            <a href="{{ route('hosting.storefront.games') }}" class="hover:text-white">Servers</a> <span class="mx-1">/</span> <span class="text-white">{{ $category->name }}</span>
+<!-- Category Header -->
+<section class="border-b border-[#1D263B] bg-[#07090E] py-14">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <nav class="flex items-center gap-2 text-xs font-mono text-gray-400 mb-4" aria-label="Breadcrumb">
+            <a href="{{ route('hosting.storefront.index') }}" class="hover:text-white transition">Home</a>
+            <span>/</span>
+            <a href="{{ route('hosting.storefront.games') }}" class="hover:text-white transition">Servers</a>
+            <span>/</span>
+            <span class="text-cyan-optic">{{ $category->name }}</span>
         </nav>
-        <h1 class="stx-display text-5xl sm:text-7xl text-white">{{ $category->name }} hosting</h1>
-        @if($category->description)<p class="mt-5 text-lg text-[var(--mut)] max-w-2xl leading-relaxed">{{ $category->description }}</p>@endif
+
+        <h1 class="stx-display text-4xl sm:text-6xl text-white tracking-tight">
+            {{ $category->name }} Server Hosting
+        </h1>
+        @if($category->description)
+            <p class="mt-4 text-base sm:text-lg text-gray-400 max-w-2xl leading-relaxed">
+                {{ $category->description }}
+            </p>
+        @endif
+
+        <div class="mt-6 flex flex-wrap items-center gap-4 text-xs font-mono text-gray-400">
+            <span class="flex items-center gap-1.5 text-emerald-400"><span class="stx-dot bg-emerald-400"></span> Colombo Low-Latency Cluster</span>
+            <span>•</span>
+            <span>NVMe Gen4 Storage</span>
+            <span>•</span>
+            <span>Billed in Sri Lankan Rupees</span>
+        </div>
     </div>
 </section>
 
-<section>
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16 space-y-14">
+<!-- Products & Spec Tables -->
+<section class="py-16 bg-[#080B10]">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
         @forelse($category->products as $product)
             <div>
-                <div class="mb-5">
-                    <h2 class="text-2xl font-semibold text-white">{{ $product->name }}</h2>
-                    @if($product->description)<p class="mt-1 text-[15px] text-[var(--mut)] max-w-2xl">{{ $product->description }}</p>@endif
+                <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-white flex items-center gap-2.5">
+                            <i class="ti {{ $product->icon ?: 'ti-server-2' }} text-cyan-optic"></i>
+                            <span>{{ $product->name }}</span>
+                        </h2>
+                        @if($product->description)
+                            <p class="mt-1 text-xs text-gray-400 max-w-2xl leading-relaxed">{{ $product->description }}</p>
+                        @endif
+                    </div>
+                    <span class="stx-badge bg-[#0E1420] text-gray-400 border border-[#1D263B]">
+                        {{ $product->plans->count() }} Available {{ \Illuminate\Support\Str::plural('Tier', $product->plans->count()) }}
+                    </span>
                 </div>
+
                 @if($product->plans->isNotEmpty())
                     @include('hosting-platform::storefront.partials.plan_table', ['plans' => $product->plans])
                 @else
-                    <div class="stx-panel p-6 text-[var(--mut)]">No plans are available for {{ $product->name }} right now.</div>
+                    <div class="stx-panel p-6 text-xs text-gray-400">No active plans are currently listed for {{ $product->name }}.</div>
                 @endif
             </div>
         @empty
-            <div class="stx-panel p-8">
-                <div class="text-xl font-semibold text-white">Nothing to order here yet.</div>
-                <p class="mt-2 text-[var(--mut)]">We have not published {{ $category->name }} plans. <a href="{{ route('hosting.storefront.contact') }}" class="text-[var(--acc)] underline underline-offset-2">Ask us</a> if you need it.</p>
-    </div>
+            <div class="stx-panel p-8 text-center max-w-xl mx-auto">
+                <i class="ti ti-package-off text-3xl text-gray-500 mb-2 block"></i>
+                <div class="text-lg font-bold text-white">No plans published yet.</div>
+                <p class="mt-2 text-xs text-gray-400 leading-relaxed">
+                    We have not published {{ $category->name }} plans yet.
+                    <a href="{{ route('hosting.storefront.contact') }}" class="text-cyan-optic hover:underline">Contact our NOC desk</a>
+                    if you need a custom allocation.
+                </p>
+            </div>
         @endforelse
+    </div>
+</section>
 @endsection

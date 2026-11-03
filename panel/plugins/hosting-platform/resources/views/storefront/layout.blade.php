@@ -96,26 +96,42 @@
         {!! $seo->custom_head_scripts !!}
     @endif
 
+    <!-- Authentic Brand Typography (Google Fonts) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS (with bespoke STX Design System tokens) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
+                    fontFamily: {
+                        sans: ['"Space Grotesk"', 'system-ui', '-apple-system', 'sans-serif'],
+                        display: ['"Archivo Black"', '"Space Grotesk"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+                    },
                     colors: {
-                        stx: {
-                            50: '#eef2ff',
-                            100: '#e0e7ff',
-                            200: '#c7d2fe',
-                            400: '#818cf8',
-                            500: '#6366f1',
-                            600: '#4f46e5',
-                            700: '#4338ca',
-                            900: '#312e81',
+                        canvas: '#07090E',
+                        surface: {
+                            DEFAULT: '#0E131E',
+                            elevated: '#141B2B',
+                            high: '#1A2338',
                         },
-                        obsidian: '#080B11',
-                        surface: '#0E131F',
-                        surfaceLight: '#141C2E',
+                        line: {
+                            DEFAULT: '#1D263B',
+                            bright: '#2A3754',
+                        },
+                        cyan: {
+                            optic: '#00D2ED',
+                            dim: '#0B4D58',
+                        },
+                        indigo: {
+                            brand: '#6366F1',
+                            deep: '#4338CA',
+                        },
                     }
                 }
             }
@@ -123,98 +139,186 @@
     </script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
     <style>
-        body { background-color: #080B11; color: #F3F4F6; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; overflow-x: hidden; }
-        .glass-panel { background: rgba(14, 19, 31, 0.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); }
-        .glass-card { background: rgba(20, 28, 46, 0.5); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.06); }
-        .glass-card:hover { border-color: rgba(99, 102, 241, 0.4); transform: translateY(-2px); }
-        .glass-nav { background: rgba(8, 11, 17, 0.88); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
-        .text-gradient { background: linear-gradient(135deg, #FFFFFF 0%, #A5B4FC 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .text-accent-gradient { background: linear-gradient(135deg, #818CF8 0%, #C084FC 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .stx-input { width:100%; padding:.7rem .85rem; background:var(--bg, #0B0E14); border:1px solid var(--line2, rgba(255,255,255,0.1)); border-radius:2px; color:var(--text, #FFF); font-size:.95rem; }
-        .stx-input:focus { outline:none; border-color:var(--acc, #6366F1); }
-        .stx-input::placeholder { color:#5C626C; }
-        .stx-field > label { display:block; margin-bottom:.4rem; }
-        .stx-hint { font-size:.8rem; color:var(--mut, #9CA3AF); margin-top:.35rem; }
-        .stx-choice { display:flex; gap:.75rem; padding:.9rem 1rem; border:1px solid var(--line2, rgba(255,255,255,0.1)); border-radius:2px; cursor:pointer; transition:border-color .15s, background .15s; }
-        .stx-choice:hover { border-color: var(--mut, #9CA3AF); }
-        .stx-choice:has(input:checked) { border-color: var(--acc, #6366F1); background: rgba(99,102,241,.08); }
-        .stx-choice input { accent-color: var(--acc, #6366F1); margin-top:.3rem; }
+        :root {
+            --bg: #07090E;
+            --surface: #0E131E;
+            --surface-elevated: #141B2B;
+            --surface-high: #1A2338;
+            --line: #1D263B;
+            --line2: #2A3754;
+            --text: #F8FAFC;
+            --mut: #94A3B8;
+            --mut-dark: #64748B;
+            --acc: #6366F1;
+            --cyan: #00D2ED;
+            --ok: #10B981;
+            --warn: #F59E0B;
+            --bad: #EF4444;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: #E2E8F0;
+            font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .stx-display { font-family: 'Archivo Black', 'Space Grotesk', sans-serif; letter-spacing: -0.02em; }
+        .stx-mono { font-family: 'JetBrains Mono', monospace; }
+        .stx-panel { background: var(--surface); border: 1px solid var(--line); border-radius: 3px; }
+        .stx-card { background: var(--surface); border: 1px solid var(--line); border-radius: 3px; transition: border-color .15s ease, background-color .15s ease; }
+        .stx-card:hover { border-color: var(--cyan); background-color: var(--surface-elevated); }
+        .stx-row:hover { background-color: rgba(255, 255, 255, 0.02); }
+
+        .stx-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            padding: 0.625rem 1.25rem;
+            background: var(--acc);
+            color: #FFFFFF;
+            border-radius: 3px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            transition: background-color .15s ease;
+        }
+        .stx-btn:hover { background: #4F46E5; }
+
+        .stx-btn-cyan {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-weight: 700;
+            font-size: 0.875rem;
+            padding: 0.625rem 1.25rem;
+            background: var(--cyan);
+            color: #041014;
+            border-radius: 3px;
+            transition: opacity .15s ease;
+        }
+        .stx-btn-cyan:hover { opacity: 0.92; }
+
+        .stx-btn-outline {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            padding: 0.625rem 1.25rem;
+            background: transparent;
+            color: #E2E8F0;
+            border: 1px solid var(--line2);
+            border-radius: 3px;
+            transition: border-color .15s ease, color .15s ease;
+        }
+        .stx-btn-outline:hover { border-color: var(--cyan); color: #FFFFFF; }
+
+        .stx-rule { border-color: var(--line); }
+        .stx-label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mut); }
+        .stx-badge { display: inline-flex; align-items: center; gap: 0.35rem; font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; font-weight: 600; padding: 0.2rem 0.55rem; border-radius: 2px; }
+        .stx-dot { display: inline-block; width: 7px; height: 7px; border-radius: 9999px; }
+
+        .stx-input { width: 100%; padding: 0.65rem 0.85rem; background: #0A0D15; border: 1px solid var(--line2); border-radius: 3px; color: #FFFFFF; font-size: 0.875rem; }
+        .stx-input:focus { outline: none; border-color: var(--cyan); }
+        .stx-input::placeholder { color: #526077; }
+        .stx-field > label { display: block; margin-bottom: 0.35rem; }
+        .stx-hint { font-size: 0.8rem; color: var(--mut); margin-top: 0.35rem; }
+
+        .stx-choice { display: flex; gap: 0.75rem; padding: 0.85rem 1rem; border: 1px solid var(--line); border-radius: 3px; cursor: pointer; transition: border-color .15s, background .15s; }
+        .stx-choice:hover { border-color: var(--line2); }
+        .stx-choice:has(input:checked) { border-color: var(--cyan); background: rgba(0, 210, 237, 0.06); }
+        .stx-choice input { accent-color: var(--cyan); margin-top: 0.25rem; }
     </style>
 </head>
-<body class="flex flex-col min-h-screen selection:bg-indigo-500 selection:text-white">
-    <!-- Top Global Notification Bar -->
-    <div class="bg-indigo-950/40 border-b border-indigo-500/20 text-xs text-gray-300 py-2 px-4">
+<body class="flex flex-col min-h-screen selection:bg-[#00D2ED] selection:text-[#041014]">
+    <!-- Top Telecommunications & SLA Ticker Bar -->
+    <div class="bg-[#0A0E17] border-b border-[#1A2234] text-xs text-gray-400 py-2 px-4">
         <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
             <div class="flex items-center gap-3">
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> SRI LANKA FAST ROUTING
+                <span class="stx-badge bg-emerald-950/40 text-emerald-300 border border-emerald-500/30">
+                    <span class="stx-dot bg-emerald-400"></span> COLOMBO IX ACTIVE
                 </span>
-                <span>Official Billed Currency: <strong class="text-white">Sri Lankan Rupee (LKR)</strong></span>
+                <span class="text-[13px]">Billed Currency: <strong class="text-white font-mono">Sri Lankan Rupee (LKR)</strong></span>
             </div>
-            <div class="flex items-center gap-4 text-gray-400 text-xs">
-                <a href="{{ route('hosting.status.index') }}" class="hover:text-emerald-400 transition flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Live Telemetry: 99.98% SLA
+            <div class="flex items-center gap-4 text-xs font-mono">
+                <a href="{{ route('hosting.status.index') }}" class="hover:text-emerald-300 transition flex items-center gap-1.5 text-emerald-400">
+                    <span class="stx-dot bg-emerald-400"></span> 99.98% Network SLA
                 </a>
-                <span>•</span>
-                <a href="{{ route('hosting.storefront.contact') }}" class="hover:text-white transition flex items-center gap-1">
-                    <i class="ti ti-headset text-indigo-400"></i> Colombo NOC Desk
+                <span class="text-gray-600">|</span>
+                <a href="{{ route('hosting.storefront.contact') }}" class="hover:text-white transition flex items-center gap-1 text-gray-400">
+                    <i class="ti ti-headset text-indigo-400"></i> NOC Desk (+94 11 234 5678)
                 </a>
             </div>
         </div>
     </div>
 
-    <!-- Main Navigation Bar -->
-    <header class="sticky top-0 z-50 glass-nav">
+    <!-- Main Precision Navigation Bar -->
+    <header class="sticky top-0 z-50 bg-[#07090E]/95 backdrop-blur-md border-b border-[#1D263B]">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-20">
-                <!-- Brand Logo & Name -->
-                <a href="{{ route('hosting.storefront.index') }}" class="flex items-center gap-3 group shrink-0">
-                    <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-xl shadow-indigo-600/30 group-hover:scale-105 transition duration-300">
-                        <i class="ti ti-shield-bolt text-2xl"></i>
+                <!-- Brand Identity -->
+                <a href="{{ route('hosting.storefront.index') }}" class="flex items-center gap-3.5 group shrink-0">
+                    <div class="w-10 h-10 rounded-[3px] bg-[#0E1420] border border-[#2A3754] flex items-center justify-center text-cyan-optic group-hover:border-cyan-optic transition">
+                        <i class="ti ti-server-2 text-xl"></i>
                     </div>
                     <div>
-                        <div class="text-2xl font-black tracking-tight text-white flex items-center gap-1.5">
-                            STX <span class="text-indigo-400 font-extrabold">ENTERPRISES</span>
+                        <div class="stx-display text-xl tracking-tight text-white flex items-center gap-1.5">
+                            STX <span class="text-cyan-optic">ENTERPRISES</span>
                         </div>
-                        <div class="text-[10px] uppercase tracking-widest text-gray-400 font-semibold -mt-1">Cloud & Game Hosting</div>
+                        <div class="text-[10px] uppercase font-mono tracking-widest text-gray-400 -mt-0.5">Cloud & Game Infra</div>
                     </div>
                 </a>
 
                 <!-- Navigation Links (Desktop) -->
-                <nav class="hidden lg:flex items-center gap-6">
-                    <a href="{{ route('hosting.storefront.index') }}" class="text-sm font-semibold {{ request()->routeIs('hosting.storefront.index') ? 'text-indigo-400 font-bold' : 'text-gray-300 hover:text-white' }} transition">Home</a>
-                    <a href="{{ route('hosting.storefront.games') }}" class="text-sm font-semibold {{ request()->routeIs('hosting.storefront.games') ? 'text-indigo-400 font-bold' : 'text-gray-300 hover:text-white' }} transition">Game Servers</a>
-                    <a href="{{ route('hosting.storefront.category', 'minecraft') }}" class="text-sm font-semibold {{ request()->is('hosting/minecraft*') ? 'text-indigo-400 font-bold' : 'text-gray-300 hover:text-white' }} transition">Minecraft</a>
-                    <a href="{{ route('hosting.kb.index') }}" class="text-sm font-semibold {{ request()->is('help*') || request()->is('knowledgebase*') ? 'text-indigo-400 font-bold' : 'text-gray-300 hover:text-white' }} transition flex items-center gap-1">
+                <nav class="hidden lg:flex items-center gap-7">
+                    <a href="{{ route('hosting.storefront.index') }}" class="text-sm font-medium transition pb-1 {{ request()->routeIs('hosting.storefront.index') ? 'text-white border-b-2 border-cyan-optic' : 'text-gray-400 hover:text-white' }}">
+                        Home
+                    </a>
+                    <a href="{{ route('hosting.storefront.games') }}" class="text-sm font-medium transition pb-1 {{ request()->routeIs('hosting.storefront.games') ? 'text-white border-b-2 border-cyan-optic' : 'text-gray-400 hover:text-white' }}">
+                        Game Servers
+                    </a>
+                    <a href="{{ route('hosting.storefront.category', 'minecraft') }}" class="text-sm font-medium transition pb-1 {{ request()->is('hosting/minecraft*') ? 'text-white border-b-2 border-cyan-optic' : 'text-gray-400 hover:text-white' }}">
+                        Minecraft
+                    </a>
+                    <a href="{{ route('hosting.kb.index') }}" class="text-sm font-medium transition pb-1 {{ request()->is('help*') || request()->is('knowledgebase*') ? 'text-white border-b-2 border-cyan-optic' : 'text-gray-400 hover:text-white' }} flex items-center gap-1.5">
                         <i class="ti ti-help text-indigo-400"></i> Help Center
                     </a>
-                    <a href="{{ route('hosting.storefront.about') }}" class="text-sm font-semibold {{ request()->routeIs('hosting.storefront.about') ? 'text-indigo-400 font-bold' : 'text-gray-300 hover:text-white' }} transition">About</a>
-                    <a href="{{ route('hosting.storefront.contact') }}" class="text-sm font-semibold {{ request()->routeIs('hosting.storefront.contact') ? 'text-indigo-400 font-bold' : 'text-gray-300 hover:text-white' }} transition">Contact</a>
-                    <a href="{{ route('hosting.status.index') }}" class="text-sm font-semibold text-emerald-400 hover:text-emerald-300 transition flex items-center gap-1.5">
-                        <i class="ti ti-activity-heartbeat"></i> Status
+                    <a href="{{ route('hosting.storefront.about') }}" class="text-sm font-medium transition pb-1 {{ request()->routeIs('hosting.storefront.about') ? 'text-white border-b-2 border-cyan-optic' : 'text-gray-400 hover:text-white' }}">
+                        About
+                    </a>
+                    <a href="{{ route('hosting.storefront.contact') }}" class="text-sm font-medium transition pb-1 {{ request()->routeIs('hosting.storefront.contact') ? 'text-white border-b-2 border-cyan-optic' : 'text-gray-400 hover:text-white' }}">
+                        Contact
+                    </a>
+                    <a href="{{ route('hosting.status.index') }}" class="text-sm font-mono text-emerald-400 hover:text-emerald-300 transition flex items-center gap-1.5">
+                        <span class="stx-dot bg-emerald-400"></span> Status
                     </a>
                 </nav>
 
-                <!-- Action / Authentication Buttons -->
+                <!-- Action & User Portal Buttons -->
                 <div class="flex items-center gap-3">
                     @auth
-                        <a href="{{ auth()->user()->isRootAdmin() ? url('/admin') : url(config('panel.client_path', 'app')) }}" class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl hover:from-indigo-500 hover:to-purple-500 transition shadow-lg shadow-indigo-600/30">
-                            <i class="ti ti-layout-dashboard"></i> {{ auth()->user()->isRootAdmin() ? 'Admin Portal' : 'My Dashboard' }}
+                        <a href="{{ auth()->user()->isRootAdmin() ? url('/admin') : url(config('panel.client_path', 'app')) }}" class="stx-btn !bg-[#151C2A] !text-white border border-[#2D3A52] hover:border-cyan-optic">
+                            <i class="ti ti-layout-dashboard text-cyan-optic"></i> {{ auth()->user()->isRootAdmin() ? 'Admin Portal' : 'My Dashboard' }}
                         </a>
                     @else
-                        <a href="{{ route('filament.app.auth.login') }}" class="hidden sm:inline-flex px-4 py-2.5 text-sm font-semibold text-gray-300 hover:text-white transition">
+                        <a href="{{ route('filament.app.auth.login') }}" class="hidden sm:inline-flex text-sm font-medium text-gray-300 hover:text-white transition px-3 py-2">
                             Sign In
                         </a>
-                        <a href="{{ route('hosting.storefront.games') }}" class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl hover:from-indigo-500 hover:to-purple-500 transition shadow-lg shadow-indigo-600/30">
-                            Deploy Server
+                        <a href="{{ route('hosting.storefront.games') }}" class="stx-btn-cyan">
+                            <i class="ti ti-bolt"></i> Deploy Server
                         </a>
                     @endauth
 
-                    <!-- Mobile Hamburger Toggle -->
+                    <!-- Mobile Drawer Hamburger -->
                     <button
                         type="button"
                         onclick="document.getElementById('mobile-menu').classList.toggle('hidden')"
-                        class="lg:hidden p-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:text-white"
+                        class="lg:hidden p-2 rounded-[3px] bg-[#111622] border border-[#212B3E] text-gray-300 hover:text-white"
                         aria-label="Toggle Navigation"
                     >
                         <i class="ti ti-menu-2 text-xl"></i>
@@ -223,107 +327,102 @@
             </div>
 
             <!-- Mobile Navigation Drawer -->
-            <div id="mobile-menu" class="hidden lg:hidden py-4 border-t border-white/10 space-y-2">
-                <a href="{{ route('hosting.storefront.index') }}" class="block px-3 py-2 rounded-lg text-sm font-semibold text-gray-300 hover:bg-white/5 hover:text-white">Home</a>
-                <a href="{{ route('hosting.storefront.games') }}" class="block px-3 py-2 rounded-lg text-sm font-semibold text-gray-300 hover:bg-white/5 hover:text-white">Game Servers</a>
-                <a href="{{ route('hosting.storefront.category', 'minecraft') }}" class="block px-3 py-2 rounded-lg text-sm font-semibold text-gray-300 hover:bg-white/5 hover:text-white">Minecraft Java/Bedrock</a>
-                <a href="{{ route('hosting.storefront.category', 'fivem') }}" class="block px-3 py-2 rounded-lg text-sm font-semibold text-gray-300 hover:bg-white/5 hover:text-white">FiveM GTA V</a>
-                <a href="{{ route('hosting.storefront.about') }}" class="block px-3 py-2 rounded-lg text-sm font-semibold text-gray-300 hover:bg-white/5 hover:text-white">About Us</a>
-                <a href="{{ route('hosting.storefront.contact') }}" class="block px-3 py-2 rounded-lg text-sm font-semibold text-gray-300 hover:bg-white/5 hover:text-white">Contact NOC Desk</a>
-                <a href="{{ route('hosting.status.index') }}" class="block px-3 py-2 rounded-lg text-sm font-semibold text-emerald-400 hover:bg-white/5">Cluster Status & Probes</a>
+            <div id="mobile-menu" class="hidden lg:hidden py-4 border-t border-[#1D263B] space-y-1">
+                <a href="{{ route('hosting.storefront.index') }}" class="block px-3 py-2 rounded-[3px] text-sm font-medium text-gray-300 hover:bg-[#141B2B] hover:text-white">Home</a>
+                <a href="{{ route('hosting.storefront.games') }}" class="block px-3 py-2 rounded-[3px] text-sm font-medium text-gray-300 hover:bg-[#141B2B] hover:text-white">Game Servers Catalog</a>
+                <a href="{{ route('hosting.storefront.category', 'minecraft') }}" class="block px-3 py-2 rounded-[3px] text-sm font-medium text-gray-300 hover:bg-[#141B2B] hover:text-white">Minecraft Java & Bedrock</a>
+                <a href="{{ route('hosting.storefront.category', 'fivem') }}" class="block px-3 py-2 rounded-[3px] text-sm font-medium text-gray-300 hover:bg-[#141B2B] hover:text-white">FiveM GTA V</a>
+                <a href="{{ route('hosting.kb.index') }}" class="block px-3 py-2 rounded-[3px] text-sm font-medium text-gray-300 hover:bg-[#141B2B] hover:text-white">Help Center & Docs</a>
+                <a href="{{ route('hosting.storefront.about') }}" class="block px-3 py-2 rounded-[3px] text-sm font-medium text-gray-300 hover:bg-[#141B2B] hover:text-white">About STX Enterprises</a>
+                <a href="{{ route('hosting.storefront.contact') }}" class="block px-3 py-2 rounded-[3px] text-sm font-medium text-gray-300 hover:bg-[#141B2B] hover:text-white">Contact NOC Desk</a>
+                <a href="{{ route('hosting.status.index') }}" class="block px-3 py-2 rounded-[3px] text-sm font-mono text-emerald-400 hover:bg-[#141B2B]">Telemetry & Probes</a>
             </div>
         </div>
     </header>
 
-    <!-- Main Content Injection -->
+    <!-- Main Content -->
     <main class="flex-grow relative">
         @yield('content')
     </main>
 
-    <!-- Structured Modern Footer -->
-    <footer class="bg-[#05070B] border-t border-white/10 pt-16 pb-12 mt-24 relative overflow-hidden">
-        <!-- Ambient Glow -->
-        <div class="absolute -bottom-24 left-1/2 -translate-x-1/2 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none"></div>
-
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-            <div class="grid grid-cols-1 md:grid-cols-5 gap-10 pb-12 border-b border-white/10">
-                <!-- Company Column -->
+    <!-- Structured Technical Footer -->
+    <footer class="bg-[#06080D] border-t border-[#1D263B] pt-16 pb-12 mt-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-10 pb-12 border-b border-[#1D263B]">
+                <!-- Brand & Infrastructure Details -->
                 <div class="md:col-span-2 space-y-4">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-lg">
-                            <i class="ti ti-shield-bolt text-xl"></i>
+                        <div class="w-9 h-9 rounded-[3px] bg-[#0E1420] border border-[#2A3754] flex items-center justify-center text-cyan-optic">
+                            <i class="ti ti-server-2 text-lg"></i>
                         </div>
-                        <span class="text-2xl font-black tracking-tight text-white">STX <span class="text-indigo-400">ENTERPRISES</span></span>
+                        <span class="stx-display text-xl text-white">STX <span class="text-cyan-optic">ENTERPRISES</span></span>
                     </div>
                     <p class="text-sm text-gray-400 leading-relaxed max-w-sm">
-                        High-performance containerized game server and cloud hosting engineered for ultra-low latency, NVMe speeds, and direct Sri Lankan payment rails.
+                        High-frequency bare-metal compute and containerized game infrastructure with direct Colombo BGP peering, NVMe Gen4 storage, and native Sri Lankan payment rails.
                     </p>
-                    <div class="pt-2 text-xs text-gray-400 space-y-1.5">
-                        <p class="flex items-center gap-2"><i class="ti ti-map-pin text-indigo-400"></i> Galle Road, Colombo 03, Western Province, Sri Lanka</p>
-                        <p class="flex items-center gap-2"><i class="ti ti-phone text-indigo-400"></i> +94 11 234 5678 (24/7 Priority Hotline)</p>
-                        <p class="flex items-center gap-2"><i class="ti ti-mail text-indigo-400"></i> billing@stxenterprises.lk</p>
+                    <div class="pt-2 text-xs font-mono text-gray-400 space-y-1.5">
+                        <p class="flex items-center gap-2"><i class="ti ti-map-pin text-cyan-optic"></i> Galle Road, Colombo 03, Western Province, Sri Lanka</p>
+                        <p class="flex items-center gap-2"><i class="ti ti-phone text-cyan-optic"></i> +94 11 234 5678 (24/7 NOC Dispatch)</p>
+                        <p class="flex items-center gap-2"><i class="ti ti-mail text-cyan-optic"></i> noc@stxenterprises.lk</p>
                     </div>
                 </div>
 
-                <!-- Game Servers -->
+                <!-- Server Portfolio -->
                 <div class="space-y-3">
-                    <h4 class="text-xs font-bold uppercase tracking-wider text-indigo-400">Game Servers</h4>
+                    <div class="stx-label text-white">Server Portfolio</div>
                     <ul class="space-y-2 text-sm text-gray-400">
-                        <li><a href="{{ route('hosting.storefront.category', 'minecraft') }}" class="hover:text-white transition">Minecraft (Paper / Fabric)</a></li>
+                        <li><a href="{{ route('hosting.storefront.category', 'minecraft') }}" class="hover:text-white transition">Minecraft Paper & Forge</a></li>
+                        <li><a href="{{ route('hosting.storefront.category', 'fivem') }}" class="hover:text-white transition">FiveM GTA V Servers</a></li>
                         <li><a href="{{ route('hosting.storefront.category', 'hytale') }}" class="hover:text-white transition">Hytale Dedicated</a></li>
-                        <li><a href="{{ route('hosting.storefront.category', 'fivem') }}" class="hover:text-white transition">FiveM GTA V</a></li>
                         <li><a href="{{ route('hosting.storefront.category', 'mta') }}" class="hover:text-white transition">MTA: San Andreas</a></li>
-                        <li><a href="{{ route('hosting.storefront.games') }}" class="hover:text-white transition text-indigo-400 font-semibold">View All Game Servers →</a></li>
+                        <li><a href="{{ route('hosting.storefront.games') }}" class="hover:text-cyan-optic transition font-medium text-xs flex items-center gap-1">Browse all servers <i class="ti ti-arrow-right"></i></a></li>
                     </ul>
                 </div>
 
-                <!-- Company & Support -->
+                <!-- Technical NOC & Help -->
                 <div class="space-y-3">
-                    <h4 class="text-xs font-bold uppercase tracking-wider text-indigo-400">Company & NOC</h4>
+                    <div class="stx-label text-white">Operations & Help</div>
                     <ul class="space-y-2 text-sm text-gray-400">
-                        <li><a href="{{ route('hosting.storefront.about') }}" class="hover:text-white transition">About STX Enterprises</a></li>
-                        <li><a href="{{ route('hosting.kb.index') }}" class="hover:text-white transition flex items-center gap-1.5">
-                            <i class="ti ti-help text-indigo-400"></i> Knowledge Base & Help
+                        <li><a href="{{ route('hosting.storefront.about') }}" class="hover:text-white transition">Datacenter & Peering</a></li>
+                        <li><a href="{{ route('hosting.kb.index') }}" class="hover:text-white transition">Knowledge Base & Guides</a></li>
+                        <li><a href="{{ route('hosting.storefront.contact') }}" class="hover:text-white transition">NOC Helpdesk Dispatch</a></li>
+                        <li><a href="{{ route('hosting.status.index') }}" class="hover:text-emerald-400 transition font-mono text-xs flex items-center gap-1.5">
+                            <span class="stx-dot bg-emerald-400"></span> Live Telemetry Status
                         </a></li>
-                        <li><a href="{{ route('hosting.storefront.contact') }}" class="hover:text-white transition">Contact Us & Helpdesk</a></li>
-                        <li><a href="{{ route('hosting.status.index') }}" class="hover:text-white transition flex items-center gap-1.5">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Live Telemetry Status
-                        </a></li>
-                        <li><a href="{{ url(trim(config('panel.client_path', 'app') . '/customer-orders', '/')) }}" class="hover:text-white transition">My orders</a></li>
-                        <li><a href="{{ url('/admin') }}" class="hover:text-white transition">Staff Admin Login</a></li>
+                        <li><a href="{{ url(trim(config('panel.client_path', 'app') . '/customer-orders', '/')) }}" class="hover:text-white transition">My Orders & Invoices</a></li>
                     </ul>
                 </div>
 
-                <!-- Local Payment Rails -->
+                <!-- Sri Lanka Payment Rails -->
                 <div class="space-y-3">
-                    <h4 class="text-xs font-bold uppercase tracking-wider text-indigo-400">Accepted Payment Rails</h4>
-                    <div class="space-y-2 text-xs text-gray-400">
-                        <div class="flex items-center gap-2 p-2 rounded-xl bg-white/5 border border-white/5">
-                            <i class="ti ti-building-bank text-indigo-400 text-base"></i>
-                            <span>Commercial Bank / BOC / Sampath</span>
+                    <div class="stx-label text-white">Accepted Local Rails</div>
+                    <div class="space-y-2 text-xs">
+                        <div class="p-2.5 rounded-[3px] bg-[#0E131E] border border-[#1D263B] text-gray-300 flex items-center gap-2">
+                            <i class="ti ti-building-bank text-cyan-optic text-sm"></i>
+                            <span>Commercial / BOC / Sampath Bank</span>
                         </div>
-                        <div class="flex items-center gap-2 p-2 rounded-xl bg-white/5 border border-white/5">
-                            <i class="ti ti-device-mobile text-red-400 text-base"></i>
+                        <div class="p-2.5 rounded-[3px] bg-[#0E131E] border border-[#1D263B] text-gray-300 flex items-center gap-2">
+                            <i class="ti ti-device-mobile text-red-400 text-sm"></i>
                             <span>Dialog eZ Cash (#111#)</span>
                         </div>
-                        <div class="flex items-center gap-2 p-2 rounded-xl bg-white/5 border border-white/5">
-                            <i class="ti ti-brand-cashapp text-yellow-400 text-base"></i>
+                        <div class="p-2.5 rounded-[3px] bg-[#0E131E] border border-[#1D263B] text-gray-300 flex items-center gap-2">
+                            <i class="ti ti-qrcode text-amber-400 text-sm"></i>
                             <span>Helakuru HelaPay LANKAQR</span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Bottom Copyright & Legal Compliance Links -->
-            <div class="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-gray-500 gap-4">
-                <p>&copy; {{ date('Y') }} {{ $seo->company_legal_name ?: 'STX Enterprises Lanka (Pvt) Ltd' }}. All rights reserved.</p>
+            <!-- Bottom Copyright & Compliance -->
+            <div class="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-gray-500 gap-4 font-mono">
+                <p>&copy; {{ date('Y') }} {{ $seo->company_legal_name ?: 'STX Enterprises Lanka (Pvt) Ltd' }}. Registered in Sri Lanka.</p>
                 <div class="flex items-center gap-6">
-                    <a href="{{ route('hosting.storefront.about') }}" class="hover:text-gray-400 transition">About</a>
-                    <a href="{{ route('hosting.storefront.contact') }}" class="hover:text-gray-400 transition">Contact</a>
-                    <a href="{{ route('hosting.status.index') }}" class="hover:text-gray-400 transition">Status</a>
-                    <a href="{{ route('hosting.seo.sitemap') }}" class="hover:text-gray-400 transition">Sitemap</a>
-                    <a href="{{ route('hosting.storefront.terms') }}" class="hover:text-gray-400 transition">Terms of Service</a>
-                    <a href="{{ route('hosting.storefront.privacy') }}" class="hover:text-gray-400 transition">Privacy Policy</a>
+                    <a href="{{ route('hosting.storefront.about') }}" class="hover:text-gray-300 transition">About</a>
+                    <a href="{{ route('hosting.storefront.contact') }}" class="hover:text-gray-300 transition">Contact</a>
+                    <a href="{{ route('hosting.status.index') }}" class="hover:text-gray-300 transition">Status</a>
+                    <a href="{{ route('hosting.seo.sitemap') }}" class="hover:text-gray-300 transition">Sitemap</a>
+                    <a href="{{ route('hosting.storefront.terms') }}" class="hover:text-gray-300 transition">Terms</a>
+                    <a href="{{ route('hosting.storefront.privacy') }}" class="hover:text-gray-300 transition">Privacy</a>
                 </div>
             </div>
         </div>
