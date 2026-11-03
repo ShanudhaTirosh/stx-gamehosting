@@ -109,13 +109,13 @@ class CustomerOrdersResource extends Resource
                     ->label('Invoice')
                     ->icon('tabler-receipt')
                     ->color('gray')
-                    ->url(fn (HostingOrder $order) => route('hosting.order.invoice', ['uuid' => $order->uuid]))
+                    ->url(fn (HostingOrder $order) => route('hosting.app.order.invoice', ['uuid' => $order->uuid]))
                     ->openUrlInNewTab(),
                 Action::make('track_order')
                     ->label('Order Details & Payment')
                     ->icon('tabler-external-link')
                     ->color('primary')
-                    ->url(fn (HostingOrder $order) => route('hosting.order.tracking', ['uuid' => $order->uuid])),
+                    ->url(fn (HostingOrder $order) => route('hosting.app.order.tracking', ['uuid' => $order->uuid])),
                 Action::make('console')
                     ->label('Open Console')
                     ->icon('tabler-terminal-2')

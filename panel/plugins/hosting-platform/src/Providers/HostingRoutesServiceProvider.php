@@ -21,6 +21,7 @@ class HostingRoutesServiceProvider extends ServiceProvider
             if (config('panel.client_path', 'app') !== '') {
                 Route::middleware(['web'])->group(function () {
                     Route::get('/login', fn () => redirect()->route('filament.app.auth.login'));
+                    Route::get('/app', fn () => redirect('/app/servers'));
                     foreach (['customer-orders', 'account'] as $legacy) {
                         Route::get('/' . $legacy, fn () => redirect(url(trim(config('panel.client_path', 'app') . '/' . $legacy, '/'))));
                     }
@@ -67,6 +68,11 @@ class HostingRoutesServiceProvider extends ServiceProvider
                 Route::get('/order/status/{uuid}', [OrderTrackingController::class, 'show'])->name('hosting.order.tracking');
                 Route::get('/order/invoice/{uuid}', [OrderTrackingController::class, 'invoice'])->name('hosting.order.invoice');
                 Route::post('/order/status/{uuid}/proof', [OrderTrackingController::class, 'submitProof'])->middleware('throttle:10,10')->name('hosting.order.submit_proof');
+
+                // Client Panel Order & Invoice Routes (all client operations under /app/)
+                Route::get('/app/order/{uuid}', [OrderTrackingController::class, 'show'])->name('hosting.app.order.tracking');
+                Route::get('/app/invoice/{uuid}', [OrderTrackingController::class, 'invoice'])->name('hosting.app.order.invoice');
+                Route::post('/app/order/{uuid}/proof', [OrderTrackingController::class, 'submitProof'])->middleware('throttle:10,10')->name('hosting.app.order.submit_proof');
 
                 // Secure File Download Stream for Proofs
                 Route::get('/order/proof/{proof}/download', [PaymentProofController::class, 'download'])->middleware('auth')->name('hosting.proof.download');

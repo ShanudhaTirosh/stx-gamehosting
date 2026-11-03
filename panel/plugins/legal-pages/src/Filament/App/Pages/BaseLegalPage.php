@@ -19,6 +19,8 @@ abstract class BaseLegalPage extends Page implements HasForms
     /** @var array<string, mixed> */
     public array $data = [];
 
+    protected static bool $shouldRegisterNavigation = false;
+
     protected string $view = 'legal-pages::base-page';
 
     protected ?string $content = null;

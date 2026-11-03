@@ -131,7 +131,22 @@ class OAuthController extends Controller
     {
         auth()->guard()->login($user, true);
 
-        return redirect()->intended(\App\Http\Responses\LoginResponse::homeUrl($user));
+        if ($user->isRootAdmin() || ($user->canAccessPanel(\Filament\Facades\Filament::getPanel('admin')) && $user->getCustomization(\App\Enums\CustomizationKey::RedirectToAdmin, true))) {
+            session()->forget('url.intended');
+
+            return redirect()->to(\Filament\Facades\Filament::getPanel('admin')->getUrl());
+        }
+
+        $intended = session()->get('url.intended');
+        if ($intended) {
+            $path = parse_url($intended, PHP_URL_PATH) ?? '';
+            if (str_starts_with($path, '/app/customer-orders') || str_starts_with($path, '/server/') || str_starts_with($path, '/app/order/')) {
+                return redirect()->intended(\Filament\Facades\Filament::getPanel('app')->getUrl() . '/servers');
+            }
+            session()->forget('url.intended');
+        }
+
+        return redirect()->to(\Filament\Facades\Filament::getPanel('app')->getUrl() . '/servers');
     }
 
     private function errorRedirect(?string $error = null): RedirectResponse

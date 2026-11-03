@@ -16,6 +16,7 @@ use App\Traits\Filament\CanCustomizeHeaderActions;
 use App\Traits\Filament\CanCustomizeHeaderWidgets;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
+use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Tabs\Tab;
@@ -47,6 +48,22 @@ class ListServers extends ListRecords
     public function boot(): void
     {
         $this->daemonServerRepository = new DaemonServerRepository();
+    }
+
+    protected function getDefaultHeaderActions(): array
+    {
+        return [
+            Action::make('billing_orders')
+                ->label('My Orders & Billing')
+                ->icon(TablerIcon::Receipt)
+                ->color('gray')
+                ->url(fn () => Filament::getPanel('app')->getUrl() . '/customer-orders'),
+            Action::make('deploy_server')
+                ->label('Deploy New Server')
+                ->icon(TablerIcon::Plus)
+                ->color('success')
+                ->url('/games'),
+        ];
     }
 
     /** @return Stack[]

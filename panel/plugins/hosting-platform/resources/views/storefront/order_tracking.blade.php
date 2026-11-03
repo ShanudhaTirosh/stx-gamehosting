@@ -33,19 +33,37 @@
     $fmt = fn ($n) => rtrim(rtrim(number_format($n, 1), '0'), '.');
     $pm = $order->paymentMethod;
     $lastRejected = $order->paymentSubmissions->where('verification_status', $VS::Rejected)->sortByDesc('created_at')->first();
+    $renewsOrder = $order->renewsOrder ?? null;
 @endphp
 
 <section class="border-b stx-rule">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-14">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+        {{-- Breadcrumb navigation back to Client Panel and Orders --}}
+        <div class="flex items-center gap-2 text-sm text-[var(--mut)] mb-6">
+            <a href="/app" class="hover:text-white transition">Client Panel</a>
+            <span>/</span>
+            <a href="/app/customer-orders" class="hover:text-white transition">My Orders & Billing</a>
+            <span>/</span>
+            <span class="text-white">Order {{ $order->order_number }}</span>
+        </div>
+
         <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
             <div>
                 <div class="flex items-center gap-3 mb-3">
-                    <span class="stx-label">Order</span>
+                    <span class="stx-label">{{ $order->isRenewal() ? 'Renewal Order' : 'Order' }}</span>
                     <span class="stx-mono text-sm text-white select-all">{{ $order->order_number }}</span>
-                    <span class="inline-flex items-center gap-2 text-sm font-medium text-white"><span class="stx-dot" style="background: {{ $chip }}"></span>{{ $st->getLabel() }}</span>
+                    <span class="inline-flex items-center gap-2 text-sm font-medium text-white">
+                        <span class="stx-dot" style="background: {{ $chip }}"></span>
+                        {{ $st->getLabel() }}
+                    </span>
                 </div>
-                <h1 class="stx-display text-5xl sm:text-6xl text-white">{{ $order->plan?->name ?? 'Server plan' }}</h1>
-                <p class="mt-2 text-[var(--mut)]">Placed {{ $order->created_at->format('j M Y, g:i A') }}</p>
+                <h1 class="stx-display text-4xl sm:text-5xl text-white">{{ $order->plan?->name ?? ($snap['plan_name'] ?? 'Server plan') }}</h1>
+                <p class="mt-2 text-[var(--mut)]">
+                    {{ $order->isRenewal() ? 'Issued' : 'Placed' }} {{ $order->created_at->format('j M Y, g:i A') }}
+                    @if($renewsOrder)
+                        &middot; renews <a href="{{ route('hosting.order.tracking', $renewsOrder->uuid) }}" class="underline text-[var(--acc)]">{{ $renewsOrder->order_number }}</a>
+                    @endif
+                </p>
             </div>
             <div class="lg:text-right">
                 <div class="stx-label">Total</div>
@@ -81,7 +99,7 @@
                 </div>
             @endif
 
-            {{-- STATE: waiting for payment / rejected --}}
+            {{-- STATE: waiting for payment / rejected / under review --}}
             @if($isOpen || $isReview)
                 @if($st === $OS::Rejected)
                     <div class="p-4 border text-sm" style="border-color:var(--bad); background:rgba(255,92,92,.07); color:#FFB4B4">
@@ -90,34 +108,44 @@
                         Please send a new slip below.
                     </div>
                 @endif
+
                 @if($isReview)
-                    <div class="stx-panel p-5">
-                        <div class="text-white font-semibold">We are checking your payment.</div>
-                        <p class="mt-1 text-[15px] text-[var(--mut)]">A person on our team verifies every slip by hand. This page updates when it is done; you can safely close it.</p>
-                            @endif
+                    <div class="stx-panel p-6">
+                        <div class="flex items-center gap-3">
+                            <span class="stx-dot" style="background:var(--warn)"></span>
+                            <span class="text-xl font-semibold text-white">We are verifying your payment.</span>
                         </div>
-                    @else
+                        <p class="mt-2 text-[15px] text-[var(--mut)]">A member of our billing team verifies every slip. This page will update automatically once verified; you can safely close it.</p>
+                    </div>
+                @endif
+
                 @if($isOpen)
                 <div>
-                    <h2 class="flex items-center gap-3 mb-5"><span class="stx-mono text-sm" style="color:var(--acc)">01</span><span class="text-xl font-semibold text-white">Send {{ $order->formatted_total }}</span></h2>
+                    <h2 class="flex items-center gap-3 mb-5">
+                        <span class="stx-mono text-sm" style="color:var(--acc)">01</span>
+                        <span class="text-xl font-semibold text-white">Transfer {{ $order->formatted_total }}</span>
+                    </h2>
                     @if($pm)
                         <div class="stx-panel">
                             <div class="px-5 py-3 border-b stx-rule text-white font-semibold">{{ $pm->name }}</div>
                             <dl class="px-5 py-4 grid sm:grid-cols-2 gap-x-6 gap-y-4 text-[15px]">
                                 @foreach([['Bank', $pm->bank_name], ['Branch', $pm->branch_name], [$pm->bank_name ? 'Account number' : 'Number', $pm->account_or_mobile_number], ['Account name', $pm->recipient_name]] as [$k, $v])
                                     @if($v)
-                                        <div><dt class="stx-label">{{ $k }}</dt><dd class="mt-1 stx-mono text-white select-all break-all {{ str_contains($k, 'number') || $k === 'Number' ? 'text-lg' : '' }}" @if(str_contains($k, 'number') || $k === 'Number') style="color:var(--acc)" @endif>{{ $v }}</dd></div>
-                                            <span class="text-xs font-bold text-white">Ref: {{ $submission->transaction_reference }}</span>
+                                        <div>
+                                            <dt class="stx-label">{{ $k }}</dt>
+                                            <dd class="mt-1 stx-mono text-white select-all break-all {{ str_contains($k, 'number') || $k === 'Number' ? 'text-lg' : '' }}" @if(str_contains($k, 'number') || $k === 'Number') style="color:var(--acc)" @endif>{{ $v }}</dd>
+                                        </div>
+                                    @endif
                                 @endforeach
                             </dl>
                             @if($pm->payment_instructions)
                                 <div class="px-5 py-4 border-t stx-rule text-[15px] text-[var(--mut)] whitespace-pre-line">{{ $pm->payment_instructions }}</div>
                             @endif
-                                                @elseif($submission->verification_status === \BrandedHosting\Platform\Enums\VerificationStatus::Rejected) bg-red-950 text-red-300 border border-red-800
+                        </div>
                     @endif
                 </div>
-                                                {{ $submission->verification_status->getLabel() }}
-                                        </div>
+                @endif
+
                 <div>
                     <h2 class="flex items-center gap-3 mb-5">
                         <span class="stx-mono text-sm" style="color:var(--acc)">{{ $isOpen ? '02' : '+' }}</span>
@@ -142,33 +170,59 @@
                         <button type="submit" class="stx-btn">Send slip <i class="ti ti-upload"></i></button>
                     </form>
                 </div>
-                            <span class="font-bold text-white">{{ round(($order->plan_snapshot['memory_mb'] ?? 1024) / 1024, 1) }} GB</span>
+
             {{-- STATE: approved, server being built --}}
             @elseif($isBuilding)
                 <div class="stx-panel p-6">
-                    <div class="flex items-center gap-3"><span class="stx-dot" style="background:var(--warn)"></span><span class="text-xl font-semibold text-white">Payment verified. Setting up your server.</span></div>
+                    <div class="flex items-center gap-3">
+                        <span class="stx-dot" style="background:var(--warn)"></span>
+                        <span class="text-xl font-semibold text-white">Payment verified. Setting up your server.</span>
+                    </div>
                     <p class="mt-2 text-[15px] text-[var(--mut)]">This usually takes a few minutes. Reload this page to check; it will show a link to your server as soon as it is ready. If nothing changes after 30 minutes, <a href="{{ route('hosting.storefront.contact') }}" class="underline">contact us</a> with order {{ $order->order_number }}.</p>
                 </div>
 
             {{-- STATE: live --}}
             @elseif($isDone)
                 <div class="stx-panel p-6">
-                    <div class="flex items-center gap-3"><span class="stx-dot" style="background:var(--ok)"></span><span class="text-xl font-semibold text-white">Your server is live.</span></div>
-                        </li>
+                    <div class="flex items-center gap-3">
+                        <span class="stx-dot" style="background:var(--ok)"></span>
+                        <span class="text-xl font-semibold text-white">{{ $order->isRenewal() ? 'Subscription Extended.' : 'Your server is live.' }}</span>
+                    </div>
+                    @if($order->server)
                         <dl class="mt-5 grid sm:grid-cols-2 gap-4 text-[15px]">
-                            @if($order->server->allocation)<div><dt class="stx-label">Address</dt><dd class="mt-1 stx-mono text-white select-all">{{ $order->server->allocation->display_address ?? 'Configuring' }}</dd></div>@endif
-                            @if($order->server->node)<div><dt class="stx-label">Node</dt><dd class="mt-1 stx-mono text-white">{{ $order->server->node->name }}</dd></div>@endif
+                            @if($order->server->allocation)
+                                <div>
+                                    <dt class="stx-label">Address</dt>
+                                    <dd class="mt-1 stx-mono text-white select-all">{{ $order->server->allocation->display_address ?? 'Configuring' }}</dd>
+                                </div>
+                            @endif
+                            @if($order->server->node)
+                                <div>
+                                    <dt class="stx-label">Node</dt>
+                                    <dd class="mt-1 stx-mono text-white">{{ $order->server->node->name }}</dd>
+                                </div>
+                            @endif
                         </dl>
-                        <a href="/server/{{ $order->server->uuid_short }}" class="stx-btn mt-6">Open control panel <i class="ti ti-arrow-up-right"></i></a>
-                        </li>
-                        <li class="flex justify-between py-1 border-b border-gray-800">
+                        <div class="mt-6 flex flex-wrap gap-4">
+                            <a href="/server/{{ $order->server->uuid_short }}" class="stx-btn">Open control panel <i class="ti ti-arrow-up-right"></i></a>
+                            <a href="/app" class="stx-btn-secondary">View all servers</a>
+                        </div>
+                    @elseif($renewsOrder && $renewsOrder->server)
+                        <div class="mt-6 flex flex-wrap gap-4">
+                            <a href="/server/{{ $renewsOrder->server->uuid_short }}" class="stx-btn">Open control panel <i class="ti ti-arrow-up-right"></i></a>
+                            <a href="/app" class="stx-btn-secondary">View all servers</a>
+                        </div>
+                    @endif
+                </div>
 
             {{-- STATE: cancelled / expired --}}
             @elseif($isDead)
                 <div class="stx-panel p-6">
                     <div class="text-xl font-semibold text-white">This order is {{ strtolower($st->getLabel()) }}.</div>
                     <p class="mt-2 text-[15px] text-[var(--mut)]">No server was created and nothing further is needed. If you already paid, please <a href="{{ route('hosting.storefront.contact') }}" class="underline">contact us</a> with the order number.</p>
-                    @if($order->plan)<a href="{{ route('hosting.checkout.show', $order->plan->slug) }}" class="stx-btn mt-5">Order again</a>@endif
+                    @if($order->plan)
+                        <a href="{{ route('hosting.checkout.show', $order->plan->slug) }}" class="stx-btn mt-5">Order again</a>
+                    @endif
                 </div>
             @endif
 
@@ -194,7 +248,7 @@
                     </div>
                 </div>
             @endif
-                            <span class="font-bold text-white">{{ $order->plan_snapshot['database_limit'] ?? 1 }}</span>
+        </div>
 
         {{-- Spec sidebar --}}
         <aside class="lg:col-span-4">
@@ -211,25 +265,6 @@
                 <div class="px-5 py-4 border-t stx-rule text-sm text-[var(--mut)]">Questions? <a href="{{ route('hosting.storefront.contact') }}" class="text-[var(--acc)] underline underline-offset-2">Contact us</a> and quote {{ $order->order_number }}.</div>
             </div>
         </aside>
-                        </li>
-                        <li class="flex justify-between py-1 border-b border-gray-800">
-                            <span class="text-gray-400">Snapshots/Backups:</span>
-                            <span class="font-bold text-white">{{ $order->plan_snapshot['backup_limit'] ?? 2 }}</span>
-                        </li>
-                    </ul>
-
-                    @if($order->server)
-                        <div class="mt-6 pt-6 border-t border-gray-800">
-                            <h4 class="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-2">Live Node Details</h4>
-                            <div class="text-xs text-gray-300 space-y-1">
-                                <div>Node: <strong class="text-white">{{ $order->server->node->name }}</strong></div>
-                                <div>Address: <span class="font-mono text-brand-300">{{ $order->server->allocation->display_address ?? 'Configuring...' }}</span></div>
-                            </div>
-                        </div>
-                    @endif
-                </div>
-            </div>
-        </div>
     </div>
 </section>
 @endsection

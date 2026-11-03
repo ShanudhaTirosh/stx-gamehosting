@@ -14,9 +14,13 @@ class ServerResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = TablerIcon::BrandDocker;
 
+    protected static ?string $navigationLabel = 'My Game Servers';
+
+    protected static ?int $navigationSort = -100;
+
     protected static ?string $slug = 'servers';
 
-    protected static bool $shouldRegisterNavigation = false;
+    protected static bool $shouldRegisterNavigation = true;
 
     public static function getNavigationBadge(): ?string
     {

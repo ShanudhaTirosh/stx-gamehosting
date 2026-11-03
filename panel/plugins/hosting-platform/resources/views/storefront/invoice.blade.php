@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 @php
+    $seo = $seo ?? \BrandedHosting\Platform\Models\HostingSeoSetting::current();
     $snap = $order->plan_snapshot ?? [];
     $setupFee = (float) ($snap['setup_fee_lkr'] ?? 0);
     $planPrice = (float) ($snap['price_lkr'] ?? max(0, (float) $order->subtotal_lkr - $setupFee));
@@ -9,7 +10,7 @@
     $dead = in_array($order->status->value, ['cancelled', 'expired'], true);
     $statusText = $paid ? 'Paid' : ($dead ? ucfirst($order->status->value) : 'Awaiting payment');
     $money = fn ($n) => 'Rs. ' . number_format((float) $n, 2);
-    $company = $seo->company_legal_name ?: ($seo->site_name ?: 'STX Enterprises');
+    $company = ($seo->company_legal_name ?? null) ?: (($seo->site_name ?? null) ?: 'STX Enterprises');
 @endphp
 <html lang="en">
 <head>
