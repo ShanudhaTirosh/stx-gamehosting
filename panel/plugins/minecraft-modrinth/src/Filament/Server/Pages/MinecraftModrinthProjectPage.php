@@ -42,6 +42,8 @@ abstract class MinecraftModrinthProjectPage extends Page implements HasTable
     protected array $versionsCache = [];
 
     protected static string|\BackedEnum|null $navigationIcon = 'tabler-packages';
+    public static function getNavigationGroup(): string|\UnitEnum|null { return 'MINECRAFT'; }
+    
 
     protected static ?string $slug = 'modrinth';
 

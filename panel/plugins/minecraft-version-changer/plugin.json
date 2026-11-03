@@ -1,19 +1,20 @@
 {
-  "id": "minecraft-version-changer",
-  "name": "Minecraft Version Changer",
-  "author": "Olivier D.",
-  "version": "1.0.3",
-  "description": "Quickly change Minecraft server version using MCJars API",
-  "category": "plugin",
-  "url": "https://github.com/pelican-plugins-community/minecraft-version-changer",
-  "namespace": "Olivier\\MinecraftVersionChanger",
-  "class": "MinecraftVersionChangerPlugin",
-  "panels": [
-    "server"
-  ],
-  "api_version": 1,
-  "meta": {
-    "status": "enabled",
-    "load_order": 1
-  }
+    "id": "minecraft-version-changer",
+    "name": "Minecraft Version Changer",
+    "author": "Olivier D.",
+    "version": "1.0.3",
+    "description": "Quickly change Minecraft server version using MCJars API",
+    "category": "plugin",
+    "url": "https://github.com/pelican-plugins-community/minecraft-version-changer",
+    "namespace": "Olivier\\MinecraftVersionChanger",
+    "class": "MinecraftVersionChangerPlugin",
+    "panels": [
+        "server"
+    ],
+    "api_version": 1,
+    "meta": {
+        "status": "enabled",
+        "load_order": 1,
+        "status_message": null
+    }
 }

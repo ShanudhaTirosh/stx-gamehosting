@@ -1,0 +1,19 @@
+{
+    "id": "fivem-manager",
+    "name": "FiveM Management Suite",
+    "author": "STX Enterprises",
+    "version": "1.0.0",
+    "description": "GameBuild DLC switcher, FXServer Artifacts manager, and txAdmin integration for FiveM game servers",
+    "category": "plugin",
+    "namespace": "BrandedHosting\\FiveM",
+    "class": "FiveMPlugin",
+    "panels": [
+        "server"
+    ],
+    "api_version": 1,
+    "meta": {
+        "status": "enabled",
+        "load_order": 2,
+        "status_message": null
+    }
+}

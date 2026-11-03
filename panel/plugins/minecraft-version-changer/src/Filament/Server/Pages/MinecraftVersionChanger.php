@@ -32,6 +32,8 @@ class MinecraftVersionChanger extends Page implements HasForms
     use InteractsWithFormActions;
 
     protected static string|\BackedEnum|null $navigationIcon = 'tabler-package';
+    public static function getNavigationGroup(): string|\UnitEnum|null { return 'MINECRAFT'; }
+    
     
     protected string $view = 'minecraft-version-changer::version-changer';
     
