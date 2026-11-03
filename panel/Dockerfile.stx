@@ -27,6 +27,10 @@ COPY --chown=www-data:www-data ./routes/auth.php /var/www/html/routes/auth.php
 COPY --chown=www-data:www-data ./app/Filament/Admin/Widgets /var/www/html/app/Filament/Admin/Widgets
 COPY --chown=www-data:www-data ./app/Filament/Admin/Pages/Dashboard.php /var/www/html/app/Filament/Admin/Pages/Dashboard.php
 COPY --chown=www-data:www-data ./resources/views/filament/widgets /var/www/html/resources/views/filament/widgets
+COPY --chown=www-data:www-data ./resources/views/errors/layout.blade.php /var/www/html/resources/views/errors/layout.blade.php
+COPY --chown=www-data:www-data ./resources/css/app.css /var/www/html/resources/css/app.css
+COPY --chown=www-data:www-data ./config/mail.php /var/www/html/config/mail.php
+COPY --chown=www-data:www-data ./app/Repositories/Daemon/DaemonServerRepository.php /var/www/html/app/Repositories/Daemon/DaemonServerRepository.php
 COPY --chown=www-data:www-data ./lang/en/admin/dashboard.php /var/www/html/lang/en/admin/dashboard.php
 
 # 3. Ensure permissions and pre-resolve plugin dependencies

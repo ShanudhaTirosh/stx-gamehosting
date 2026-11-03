@@ -179,7 +179,7 @@
                         </div>
                         <div class="min-w-0">
                             <div class="text-xs text-gray-400">Gamer Community & Live Bot Support</div>
-                            <a href="https://discord.gg" target="_blank" class="text-sm font-bold text-white hover:text-indigo-400 transition flex items-center gap-1.5 mt-0.5">
+                            <a href="{{ $seo->support_discord_url ?: config('app.discord_url', 'https://discord.gg/shanutechx') }}" target="_blank" class="text-sm font-bold text-white hover:text-indigo-400 transition flex items-center gap-1.5 mt-0.5">
                                 <span>STX Gaming Discord</span>
                                 <i class="ti ti-external-link text-xs"></i>
                             </a>

@@ -38,11 +38,13 @@ class DaemonServerRepository extends DaemonRepository
                     ->danger()
                     ->send();
             }
+        } catch (\Illuminate\Http\Client\ConnectionException) {
+            return ['state' => ContainerStatus::Offline->value];
         } catch (Exception $exception) {
             report($exception);
         }
 
-        return ['state' => ContainerStatus::Missing->value];
+        return ['state' => ContainerStatus::Offline->value];
     }
 
     /**

@@ -22,9 +22,10 @@ class HostingRoutesServiceProvider extends ServiceProvider
                 Route::middleware(['web'])->group(function () {
                     Route::get('/login', fn () => redirect()->route('filament.app.auth.login'));
                     Route::get('/app', fn () => redirect('/app/servers'));
-                    foreach (['customer-orders', 'account'] as $legacy) {
-                        Route::get('/' . $legacy, fn () => redirect(url(trim(config('panel.client_path', 'app') . '/' . $legacy, '/'))));
-                    }
+                    Route::get('/app/account', fn () => redirect('/app/profile'));
+                    Route::get('/account', fn () => redirect('/app/profile'));
+                    Route::get('/customer-orders', fn () => redirect('/app/customer-orders'));
+                    Route::redirect('/hosting/bot', '/hosting/bots');
                 });
             }
 

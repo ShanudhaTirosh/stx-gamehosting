@@ -153,7 +153,7 @@
             <a href="{{ route('hosting.storefront.contact') }}" class="px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center gap-2 shadow-lg">
                 <i class="ti ti-headset"></i> Open Helpdesk Ticket
             </a>
-            <a href="https://discord.gg" target="_blank" class="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition flex items-center gap-2">
+            <a href="{{ $seo->support_discord_url ?: config('app.discord_url', 'https://discord.gg/shanutechx') }}" target="_blank" class="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition flex items-center gap-2">
                 <i class="ti ti-brand-discord"></i> Join Discord
             </a>
         </div>
