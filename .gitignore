@@ -8,6 +8,7 @@
 *.zip
 
 # Operating System & IDE Files
+.agents
 .DS_Store
 .DS_Store?
 ._*
