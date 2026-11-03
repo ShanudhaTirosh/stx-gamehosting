@@ -1,0 +1,19 @@
+{
+    "id": "minecraft-configurator",
+    "name": "Minecraft Configurator",
+    "author": "STX Enterprises",
+    "version": "1.0.0",
+    "description": "Visual server.properties configurator with live MOTD preview and game settings for Minecraft servers",
+    "category": "plugin",
+    "namespace": "BrandedHosting\\MinecraftConfigurator",
+    "class": "MinecraftConfiguratorPlugin",
+    "panels": [
+        "server"
+    ],
+    "api_version": 1,
+    "meta": {
+        "status": "enabled",
+        "load_order": 5,
+        "status_message": null
+    }
+}

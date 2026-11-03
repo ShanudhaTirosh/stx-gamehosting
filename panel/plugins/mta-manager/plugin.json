@@ -1,0 +1,19 @@
+{
+    "id": "mta-manager",
+    "name": "MTA:SA Server Manager",
+    "author": "STX Enterprises",
+    "version": "1.0.0",
+    "description": "Visual mtaserver.conf configurator and resource tools for Multi Theft Auto servers",
+    "category": "plugin",
+    "namespace": "BrandedHosting\\MtaManager",
+    "class": "MtaManagerPlugin",
+    "panels": [
+        "server"
+    ],
+    "api_version": 1,
+    "meta": {
+        "status": "enabled",
+        "load_order": 4,
+        "status_message": null
+    }
+}

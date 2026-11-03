@@ -15,6 +15,7 @@ COPY --chown=www-data:www-data ./resources/views/filament/layouts/footer.blade.p
 COPY --chown=www-data:www-data ./app/Providers/Filament/FilamentServiceProvider.php /var/www/html/app/Providers/Filament/FilamentServiceProvider.php
 COPY --chown=www-data:www-data ./app/Providers/Filament/AppPanelProvider.php /var/www/html/app/Providers/Filament/AppPanelProvider.php
 COPY --chown=www-data:www-data ./app/Providers/Filament/AdminPanelProvider.php /var/www/html/app/Providers/Filament/AdminPanelProvider.php
+COPY --chown=www-data:www-data ./app/Providers/Filament/ServerPanelProvider.php /var/www/html/app/Providers/Filament/ServerPanelProvider.php
 COPY --chown=www-data:www-data ./app/Filament/App/Resources/Servers/ServerResource.php /var/www/html/app/Filament/App/Resources/Servers/ServerResource.php
 COPY --chown=www-data:www-data ./app/Filament/App/Resources/Servers/Pages/ListServers.php /var/www/html/app/Filament/App/Resources/Servers/Pages/ListServers.php
 COPY --chown=www-data:www-data ./app/Enums/CustomizationKey.php /var/www/html/app/Enums/CustomizationKey.php

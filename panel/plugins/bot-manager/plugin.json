@@ -1,0 +1,19 @@
+{
+    "id": "bot-manager",
+    "name": "Bot & Application Suite",
+    "author": "STX Enterprises",
+    "version": "1.0.0",
+    "description": "Environment & secrets manager, Git deployer, and package helper for Discord, Telegram, and application bots",
+    "category": "plugin",
+    "namespace": "BrandedHosting\\BotManager",
+    "class": "BotManagerPlugin",
+    "panels": [
+        "server"
+    ],
+    "api_version": 1,
+    "meta": {
+        "status": "enabled",
+        "load_order": 3,
+        "status_message": null
+    }
+}
