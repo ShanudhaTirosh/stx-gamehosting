@@ -20,6 +20,7 @@ class HostingRoutesServiceProvider extends ServiceProvider
             // Old client-panel URLs (before the panel moved off the site root) keep working.
             if (config('panel.client_path', 'app') !== '') {
                 Route::middleware(['web'])->group(function () {
+                    Route::get('/login', fn () => redirect()->route('filament.app.auth.login'));
                     foreach (['customer-orders', 'account'] as $legacy) {
                         Route::get('/' . $legacy, fn () => redirect(url(trim(config('panel.client_path', 'app') . '/' . $legacy, '/'))));
                     }

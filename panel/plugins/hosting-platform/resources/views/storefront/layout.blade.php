@@ -130,6 +130,15 @@
         .glass-nav { background: rgba(8, 11, 17, 0.88); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
         .text-gradient { background: linear-gradient(135deg, #FFFFFF 0%, #A5B4FC 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .text-accent-gradient { background: linear-gradient(135deg, #818CF8 0%, #C084FC 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .stx-input { width:100%; padding:.7rem .85rem; background:var(--bg, #0B0E14); border:1px solid var(--line2, rgba(255,255,255,0.1)); border-radius:2px; color:var(--text, #FFF); font-size:.95rem; }
+        .stx-input:focus { outline:none; border-color:var(--acc, #6366F1); }
+        .stx-input::placeholder { color:#5C626C; }
+        .stx-field > label { display:block; margin-bottom:.4rem; }
+        .stx-hint { font-size:.8rem; color:var(--mut, #9CA3AF); margin-top:.35rem; }
+        .stx-choice { display:flex; gap:.75rem; padding:.9rem 1rem; border:1px solid var(--line2, rgba(255,255,255,0.1)); border-radius:2px; cursor:pointer; transition:border-color .15s, background .15s; }
+        .stx-choice:hover { border-color: var(--mut, #9CA3AF); }
+        .stx-choice:has(input:checked) { border-color: var(--acc, #6366F1); background: rgba(99,102,241,.08); }
+        .stx-choice input { accent-color: var(--acc, #6366F1); margin-top:.3rem; }
     </style>
 </head>
 <body class="flex flex-col min-h-screen selection:bg-indigo-500 selection:text-white">
@@ -144,15 +153,6 @@
             </div>
             <div class="flex items-center gap-4 text-gray-400 text-xs">
                 <a href="{{ route('hosting.status.index') }}" class="hover:text-emerald-400 transition flex items-center gap-1.5">
-        .stx-input { width:100%; padding:.7rem .85rem; background:var(--bg); border:1px solid var(--line2); border-radius:2px; color:var(--text); font-size:.95rem; }
-        .stx-input:focus { outline:none; border-color:var(--acc); }
-        .stx-input::placeholder { color:#5C626C; }
-        .stx-field > label { display:block; margin-bottom:.4rem; }
-        .stx-hint { font-size:.8rem; color:var(--mut); margin-top:.35rem; }
-        .stx-choice { display:flex; gap:.75rem; padding:.9rem 1rem; border:1px solid var(--line2); border-radius:2px; cursor:pointer; transition:border-color .15s, background .15s; }
-        .stx-choice:hover { border-color: var(--mut); }
-        .stx-choice:has(input:checked) { border-color: var(--acc); background: rgba(212,255,58,.05); }
-        .stx-choice input { accent-color: var(--acc); margin-top:.3rem; }
                     <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Live Telemetry: 99.98% SLA
                 </a>
                 <span>•</span>

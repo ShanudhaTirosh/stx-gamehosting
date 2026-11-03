@@ -6,6 +6,7 @@ use App\Models\Server;
 use App\Models\User;
 use BrandedHosting\Platform\Enums\OrderStatus;
 use BrandedHosting\Platform\Enums\VerificationStatus;
+use BrandedHosting\Platform\Jobs\ApplyRenewalJob;
 use BrandedHosting\Platform\Jobs\ProvisionPaidServerJob;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,6 +22,8 @@ class HostingOrder extends Model
     protected $fillable = [
         'uuid',
         'order_number',
+        'order_type',
+        'renews_order_id',
         'user_id',
         'plan_id',
         'payment_method_id',
@@ -34,6 +37,9 @@ class HostingOrder extends Model
         'expires_at',
         'approved_at',
         'provisioned_at',
+        'paid_until',
+        'suspended_at',
+        'billing_stage',
     ];
 
     protected $casts = [
@@ -46,6 +52,9 @@ class HostingOrder extends Model
         'expires_at' => 'datetime',
         'approved_at' => 'datetime',
         'provisioned_at' => 'datetime',
+        'paid_until' => 'datetime',
+        'suspended_at' => 'datetime',
+        'billing_stage' => 'integer',
     ];
 
     public static function boot(): void
@@ -60,6 +69,42 @@ class HostingOrder extends Model
                 $order->order_number = 'ORD-' . strtoupper(Str::random(8));
             }
         });
+    }
+
+    public function renewals(): HasMany
+    {
+        return $this->hasMany(static::class, 'renews_order_id');
+    }
+
+    public function renewsOrder(): BelongsTo
+    {
+        return $this->belongsTo(static::class, 'renews_order_id');
+    }
+
+    public function isRenewal(): bool
+    {
+        return $this->order_type === 'renewal';
+    }
+
+    /**
+     * The unpaid renewal invoice for this server, if there is one.
+     */
+    public function openRenewal(): ?self
+    {
+        return $this->renewals()
+            ->whereIn('status', [OrderStatus::PendingPayment->value, OrderStatus::UnderReview->value])
+            ->latest('id')
+            ->first();
+    }
+
+    /**
+     * Queue the right fulfilment job: a new server for a new order, or a date extension for a renewal.
+     */
+    public function queueFulfilment(): void
+    {
+        $this->isRenewal()
+            ? ApplyRenewalJob::dispatch($this->getKey())
+            : ProvisionPaidServerJob::dispatch($this->getKey());
     }
 
     public function user(): BelongsTo
@@ -110,7 +155,7 @@ class HostingOrder extends Model
             $order = static::query()->whereKey($this->getKey())->lockForUpdate()->first();
 
             $approvable = [OrderStatus::PendingPayment, OrderStatus::UnderReview, OrderStatus::Approved];
-            if (!$order || $order->server_id !== null || !in_array($order->status, $approvable, true)) {
+            if (!$order || (!$order->isRenewal() && $order->server_id !== null) || !in_array($order->status, $approvable, true)) {
                 return false;
             }
 
@@ -133,8 +178,7 @@ class HostingOrder extends Model
 
         if ($approved) {
             // Outside the transaction so the worker always sees the committed row.
-            ProvisionPaidServerJob::dispatch($this->getKey());
-            $this->refresh();
+            $this->refresh()->queueFulfilment();
         }
 
         return $approved;
