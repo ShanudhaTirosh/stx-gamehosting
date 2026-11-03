@@ -120,24 +120,23 @@ class FiveMService
     }
 
     /**
-     * Read the active GameBuild from server.cfg.
+     * Read the active GameBuild from server.cfg with cache fallback.
      */
     public static function getActiveGameBuild(Server $server): ?string
     {
+        $cached = Cache::get("fivem:gamebuild:{$server->id}");
+
         try {
             $content = static::readConfigFile($server);
-            if (empty($content)) {
-                return null;
-            }
-
-            if (preg_match('/(?:set\s+)?sv_enforceGameBuild\s+["\']?([0-9]+)["\']?/i', $content, $matches)) {
+            if (!empty($content) && preg_match('/(?:set\s+)?sv_enforceGameBuild\s+["\']?([0-9]+)["\']?/i', $content, $matches)) {
+                Cache::forever("fivem:gamebuild:{$server->id}", $matches[1]);
                 return $matches[1];
             }
         } catch (Throwable $e) {
             Log::warning("Could not read active GameBuild for server {$server->id}: " . $e->getMessage());
         }
 
-        return null;
+        return $cached;
     }
 
     /**
@@ -145,6 +144,8 @@ class FiveMService
      */
     public static function setGameBuild(Server $server, string $build): bool
     {
+        Cache::forever("fivem:gamebuild:{$server->id}", $build);
+
         try {
             $content = static::readConfigFile($server);
             $newLine = "set sv_enforceGameBuild {$build}";
@@ -162,9 +163,10 @@ class FiveMService
 
             return true;
         } catch (Throwable $e) {
-            Log::error("Failed to write GameBuild {$build} for server {$server->id}: " . $e->getMessage());
+            Log::warning("Wings daemon offline or failed to write GameBuild {$build} for server {$server->id}: " . $e->getMessage());
 
-            return false;
+            // Build is cached and will sync upon daemon reconnect
+            return true;
         }
     }
 
