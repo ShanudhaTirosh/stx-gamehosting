@@ -23,3 +23,4 @@ class MinecraftConfiguratorPlugin implements Plugin
 
     public function boot(Panel $panel): void {}
 }
+

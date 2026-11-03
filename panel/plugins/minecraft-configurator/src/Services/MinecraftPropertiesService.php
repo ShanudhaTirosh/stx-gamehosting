@@ -197,3 +197,4 @@ class MinecraftPropertiesService
         $repo->putContent('server.properties', $content);
     }
 }
+

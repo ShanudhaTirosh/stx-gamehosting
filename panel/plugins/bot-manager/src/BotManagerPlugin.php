@@ -23,3 +23,4 @@ class BotManagerPlugin implements Plugin
 
     public function boot(Panel $panel): void {}
 }
+

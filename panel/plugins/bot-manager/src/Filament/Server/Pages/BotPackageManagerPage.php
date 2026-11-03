@@ -90,3 +90,4 @@ class BotPackageManagerPage extends Page
         return 'Bot Package Helper (' . strtoupper($this->runtime) . ')';
     }
 }
+

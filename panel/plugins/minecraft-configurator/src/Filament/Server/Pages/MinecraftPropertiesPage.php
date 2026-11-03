@@ -122,3 +122,4 @@ class MinecraftPropertiesPage extends Page
         return 'Minecraft Server Properties Configurator';
     }
 }
+

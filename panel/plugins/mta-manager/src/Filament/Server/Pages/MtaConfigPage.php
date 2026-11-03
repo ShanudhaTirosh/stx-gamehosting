@@ -102,3 +102,4 @@ class MtaConfigPage extends Page
         return 'Multi Theft Auto Server Configurator';
     }
 }
+

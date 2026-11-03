@@ -23,3 +23,4 @@ class MtaManagerPlugin implements Plugin
 
     public function boot(Panel $panel): void {}
 }
+
