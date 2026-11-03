@@ -23,3 +23,4 @@ class FiveMPlugin implements Plugin
 
     public function boot(Panel $panel): void {}
 }
+
